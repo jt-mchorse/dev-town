@@ -1,0 +1,60 @@
+export const GAME_CONFIG = {
+  viewWidth: 480,
+  viewHeight: 270,
+  tileSize: 32,
+  worldTilesX: 30,
+  worldTilesY: 20,
+  playerSpeed: 110,
+  saveKey: "pixel-portfolio.save.v0",
+  lpcFrame: 64,
+  charScale: 1,
+  newsCacheKey: "pixel-portfolio.news.v0",
+} as const;
+
+export const SCENES = {
+  Boot: "BootScene",
+  Title: "TitleScene",
+  Preload: "PreloadScene",
+  CharCreate: "CharCreateScene",
+  Town: "TownScene",
+  Engineering: "EngineeringDistrictScene",
+  Skill: "SkillGroveScene",
+  Fishing: "FishingDockScene",
+  AILab: "AIMLLabScene",
+  Dungeon: "FullStackDungeonScene",
+  Shop: "ShopScene",
+  UI: "UIScene",
+  ShopUI: "ShopUIScene",
+  FishingUI: "FishingUIScene",
+  QuizUI: "QuizUIScene",
+  TypingUI: "TypingUIScene",
+  DebugUI: "DebugUIScene",
+  SettingsUI: "SettingsUIScene",
+} as const;
+
+export const EVENTS = {
+  DialogShow: "dialog:show",
+  DialogAdvance: "dialog:advance",
+  DialogClose: "dialog:close",
+  CreditsChanged: "credits:changed",
+  AppearanceChanged: "appearance:changed",
+  ShopOpen: "shop:open",
+  ShopClose: "shop:close",
+  ShopBuy: "shop:buy",
+  ShopEquip: "shop:equip",
+  FishingStart: "fishing:start",
+  FishingEnd: "fishing:end",
+  ToastShow: "toast:show",
+  MinigameStart: "minigame:start",
+  MinigameEnd: "minigame:end",
+} as const;
+
+export const Z = {
+  Ground: 0,
+  GroundDecal: 1,
+  Walls: 5,
+  Entities: 10,
+  Overlay: 50,
+  HUD: 1000,
+  HUDFront: 1100,
+} as const;
