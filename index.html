@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>/dev/town</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --panel: #11151d;
+        --line: #2a3142;
+        --text: #e6e8ee;
+        --dim: #7e859a;
+        --accent: #9ad7ff;
+        --gold: #ffd479;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(ellipse at top, #1a2030 0%, #0b0d12 60%) no-repeat,
+          var(--bg);
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        color: var(--text);
+      }
+      .page {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+      }
+      .title {
+        font-size: 18px;
+        color: var(--accent);
+        letter-spacing: 1px;
+      }
+      .title small {
+        color: var(--dim);
+        margin-left: 8px;
+        font-size: 11px;
+      }
+      .stage {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+      }
+      #game {
+        width: 960px;
+        height: 540px;
+        background: #0b0d12;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 0 0 1px #000,
+          0 8px 32px rgba(0, 0, 0, 0.6);
+      }
+      #game canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        display: block;
+      }
+      .legend {
+        width: 960px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 12px 14px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .legend section h3 {
+        margin: 0 0 6px 0;
+        font-size: 10px;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .legend ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .legend li {
+        padding: 2px 0;
+        color: var(--text);
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+      }
+      .legend .key {
+        flex: 0 0 auto;
+        background: #1c2230;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 1px 5px;
+        color: var(--accent);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .legend .compass {
+        font-size: 11px;
+        color: var(--dim);
+      }
+      .legend .compass b {
+        color: var(--gold);
+        font-weight: normal;
+      }
+      .footer {
+        font-size: 10px;
+        color: var(--dim);
+        text-align: center;
+        max-width: 720px;
+      }
+      .footer a {
+        color: var(--accent);
+      }
+      @media (max-width: 1000px) {
+        .legend {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 640px) {
+        .legend {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="title">/dev/town <small>an interactive engineering portfolio</small></div>
+      <div class="stage">
+        <div id="game"></div>
+        <div class="legend">
+          <section>
+            <h3>Controls</h3>
+            <ul>
+              <li><span class="key">WASD</span> / <span class="key">↑↓←→</span> move</li>
+              <li><span class="key">E</span> interact</li>
+              <li><span class="key">Space</span> / <span class="key">Enter</span> advance dialog</li>
+              <li><span class="key">Esc</span> leave a modal</li>
+              <li><span class="key">1</span>–<span class="key">4</span> answer quiz</li>
+              <li><span class="key">N</span> next puzzle (debug trial)</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Map</h3>
+            <ul class="compass">
+              <li>← <b>Engineering</b> — work history</li>
+              <li>↑-W <b>Dungeon</b> — typing + bug-spot</li>
+              <li>↑-E <b>AI/ML Lab</b> — quizzes</li>
+              <li>→ <b>Skill Grove</b> — skills + projects</li>
+              <li>↓ <b>Fishing Dock</b> — tech-pun fish</li>
+            </ul>
+          </section>
+          <section>
+            <h3>In Town</h3>
+            <ul>
+              <li>greeter — orientation</li>
+              <li>shopkeeper — cosmetics</li>
+              <li>news kiosk — daily HN</li>
+              <li>fountain — central plaza</li>
+              <li>mysterious stump — credit drip</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Tip</h3>
+            <ul>
+              <li class="compass">A golden <b>Daily Secret</b> chest hides somewhere new every 24h.</li>
+              <li class="compass">◆ = credits. Spend at the cosmetic shop.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+      <div class="footer">
+        Art: <a href="https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator">LPC characters</a>
+        + <a href="https://opengameart.org/content/lpc-tile-atlas">LPC tile atlas</a>
+        + <a href="https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements">LPC farming pack</a>.
+        CC-BY-SA 3.0 / GPL3+. Code: MIT.
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
