@@ -70,12 +70,17 @@ export class SettingsUIScene extends Phaser.Scene {
       .setDepth(Z.HUDFront);
 
     this.statusText = this.add
-      .text(w / 2, h - 50, "[R] reset save (will require new character)\n[Esc] close", {
-        fontFamily: "monospace",
-        fontSize: "10px",
-        color: "#bcc4d4",
-        align: "center",
-      })
+      .text(
+        w / 2,
+        h - 60,
+        "[T] view trinkets   [R] reset save   [Esc] close",
+        {
+          fontFamily: "monospace",
+          fontSize: "10px",
+          color: "#bcc4d4",
+          align: "center",
+        },
+      )
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setDepth(Z.HUDFront);
@@ -83,6 +88,7 @@ export class SettingsUIScene extends Phaser.Scene {
     const kb = this.input.keyboard!;
     kb.on("keydown-R", () => this.tryReset());
     kb.on("keydown-Y", () => this.confirmReset());
+    kb.on("keydown-T", () => this.scene.launch(SCENES.TrinketsUI));
     kb.on("keydown-ESC", () => this.exit());
   }
 

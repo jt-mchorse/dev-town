@@ -30,6 +30,8 @@ export const SCENES = {
   TypingUI: "TypingUIScene",
   DebugUI: "DebugUIScene",
   SettingsUI: "SettingsUIScene",
+  TrinketsUI: "TrinketsUIScene",
+  IntroUI: "IntroUIScene",
 } as const;
 
 export const EVENTS = {
