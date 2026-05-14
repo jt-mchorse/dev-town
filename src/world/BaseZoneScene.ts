@@ -164,11 +164,62 @@ export abstract class BaseZoneScene extends Phaser.Scene {
       quantity: 1,
     });
     this.dustEmitter.setDepth(Z.GroundDecal);
+
+    // Day/night tint overlay. Covers the canvas, scroll-locked, alpha
+    // driven by an 8-minute in-game cycle. Sits below the HUD so dialog,
+    // toasts, and credits readout aren't dimmed.
+    this.dayNightOverlay = this.add
+      .rectangle(0, 0, GAME_CONFIG.viewWidth, GAME_CONFIG.viewHeight, 0x000000, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(Z.Overlay + 10);
+    this.refreshDayNight();
+    this.time.addEvent({ delay: 200, loop: true, callback: () => this.refreshDayNight() });
+  }
+
+  /**
+   * Picks a fill color + alpha for the day/night overlay based on the
+   * scene's elapsed time. 8-minute cycle: dawn ~1:20, day ~3:20,
+   * dusk ~5:00, night ~6:40, back to dawn.
+   */
+  private refreshDayNight(): void {
+    if (!this.dayNightOverlay) return;
+    const CYCLE_MS = 8 * 60 * 1000;
+    const t = (this.time.now % CYCLE_MS) / CYCLE_MS; // 0..1
+    // five anchors: dawn (warm orange), day (clear), dusk (warm),
+    // night (cool blue), pre-dawn (deep blue)
+    const anchors: Array<{ at: number; rgb: [number, number, number]; alpha: number }> = [
+      { at: 0.0, rgb: [255, 170, 110], alpha: 0.18 }, // dawn
+      { at: 0.18, rgb: [0, 0, 0], alpha: 0.0 }, // day
+      { at: 0.55, rgb: [0, 0, 0], alpha: 0.0 }, // day
+      { at: 0.7, rgb: [255, 120, 80], alpha: 0.22 }, // dusk
+      { at: 0.82, rgb: [40, 60, 110], alpha: 0.4 }, // night
+      { at: 0.95, rgb: [40, 60, 110], alpha: 0.35 }, // pre-dawn
+      { at: 1.0, rgb: [255, 170, 110], alpha: 0.18 }, // wrap
+    ];
+    let a = anchors[0];
+    let b = anchors[1];
+    for (let i = 0; i < anchors.length - 1; i += 1) {
+      if (t >= anchors[i].at && t <= anchors[i + 1].at) {
+        a = anchors[i];
+        b = anchors[i + 1];
+        break;
+      }
+    }
+    const span = b.at - a.at;
+    const k = span > 0 ? (t - a.at) / span : 0;
+    const r = Math.round(a.rgb[0] + (b.rgb[0] - a.rgb[0]) * k);
+    const g = Math.round(a.rgb[1] + (b.rgb[1] - a.rgb[1]) * k);
+    const bl = Math.round(a.rgb[2] + (b.rgb[2] - a.rgb[2]) * k);
+    const alpha = a.alpha + (b.alpha - a.alpha) * k;
+    this.dayNightOverlay.fillColor = (r << 16) | (g << 8) | bl;
+    this.dayNightOverlay.setAlpha(alpha);
   }
 
   protected dustEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   private lastDustAt = 0;
   private lastPlayerPos = { x: 0, y: 0 };
+  private dayNightOverlay?: Phaser.GameObjects.Rectangle;
 
   update(): void {
     this.player.update();
