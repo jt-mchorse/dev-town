@@ -95,7 +95,10 @@ export class EngineeringDistrictScene extends BaseZoneScene {
         this.GRASS_DIRT_AUTOTILE,
       );
 
-      this.add.image(bx, by, TEX.Building).setDepth(Z.Walls + 1).setOrigin(0, 0);
+      // Alternate brown-roof and slate-roof buildings so the avenue
+      // doesn't read as three identical clones.
+      const buildingTex = i % 2 === 0 ? TEX.Building : TEX.BuildingAlt;
+      this.add.image(bx, by, buildingTex).setDepth(Z.Walls + 1).setOrigin(0, 0);
       // (no standalone building label — the NPC label below conveys the
       // building name as the company tag, and the dialog reveals the role.)
 
@@ -127,6 +130,13 @@ export class EngineeringDistrictScene extends BaseZoneScene {
     // benches along the avenue
     for (let i = 0; i < 4; i += 1) {
       this.addDecor(TEX.Bench, TILE * 6 + i * TILE * 12, cy + TILE * 3, { anchorY: 0.85 });
+    }
+
+    // Street lamps between buildings — sit on the north sand shoulder so
+    // they read as "lining the road" rather than dropped onto the path.
+    for (let i = 0; i < 4; i += 1) {
+      const lx = TILE * 4 + i * (worldW - TILE * 8) / 3;
+      this.addDecor(TEX.StreetLamp, lx, cy - TILE / 2, { anchorY: 0.95 });
     }
 
     // street trees lining the road

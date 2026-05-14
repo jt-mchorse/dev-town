@@ -39,8 +39,10 @@ export class AIMLLabScene extends BaseZoneScene {
     this.paintWholeFloor(worldW, worldH, TEX.Stone);
 
     const cy = Math.floor(GAME_CONFIG.worldTilesY / 2) * TILE;
+    // Wider central carpet so the room reads as a "research floor" rather
+    // than a stone hall with a stripe — 6 tiles tall centered on cy.
     this.paintGround(
-      new Phaser.Geom.Rectangle(0, cy - TILE, worldW, TILE * 3),
+      new Phaser.Geom.Rectangle(0, cy - TILE * 3, worldW, TILE * 6),
       TEX.CarpetRed,
     );
 
@@ -50,20 +52,29 @@ export class AIMLLabScene extends BaseZoneScene {
     this.addSpawn("default", worldW / 2, cy + TILE / 2);
     this.addSpawn("from_town", TILE * 2 + TILE / 2, cy + TILE / 2, "right");
 
-    this.addSign(TILE * 4, cy - TILE * 3, "Lab Sign", [
+    this.addSign(TILE * 4, cy - TILE * 5, "Lab Sign", [
       { speaker: "Lab Sign", text: "AI/ML LAB" },
       { speaker: "Lab Sign", text: "Two researchers run quizzes. Answer questions, earn credits." },
       { speaker: "Lab Sign", text: "The blinking servers do nothing functional. Don't ask." },
     ]);
 
-    // server racks lining the back wall
-    const serverY = TILE * 3;
-    for (let i = 0; i < 8; i += 1) {
-      const sx = TILE * 6 + i * TILE * 6;
+    // Back-wall server racks (every 4 tiles instead of 6 so the wall is
+    // visibly populated end-to-end).
+    const serverY = TILE * 2;
+    for (let i = 0; i < 12; i += 1) {
+      const sx = TILE * 3 + i * TILE * 4;
+      if (sx > worldW - TILE * 3) continue;
       this.add.image(sx, serverY, TEX.Server).setDepth(Z.Walls).setOrigin(0, 0);
       const block = this.add.rectangle(sx, serverY, 16, 32, 0, 0).setOrigin(0, 0);
       this.physics.add.existing(block, true);
       this.walls.add(block as unknown as Phaser.GameObjects.GameObject);
+    }
+    // Whiteboards interspersed between server clusters.
+    for (let i = 0; i < 3; i += 1) {
+      this.add
+        .image(TILE * 7 + i * TILE * 7, TILE * 3, TEX.Whiteboard)
+        .setDepth(Z.Walls)
+        .setOrigin(0, 0);
     }
 
     // quiz NPCs at three tiers
@@ -95,14 +106,15 @@ export class AIMLLabScene extends BaseZoneScene {
       onInteract: () => this.openQuiz("hard"),
     });
 
-    // monitors on workbenches
-    for (let i = 0; i < 6; i += 1) {
-      this.addDecor(TEX.Monitor, TILE * 8 + i * TILE * 7, cy + TILE * 8, { anchorY: 0.85 });
+    // workbench row of monitors south of the carpet — visible from default
+    // spawn, gives the room a clear "lab floor" foreground
+    for (let i = 0; i < 8; i += 1) {
+      this.addDecor(TEX.Monitor, TILE * 4 + i * TILE * 4, cy + TILE * 5, { anchorY: 0.85 });
     }
-    // crates of "training data" along the walls
-    for (let i = 0; i < 3; i += 1) {
-      this.addSolidDecor(TEX.Crate, TILE * 4 + i * TILE * 2, cy - TILE * 6, 14, 4);
-      this.addSolidDecor(TEX.Crate, worldW - TILE * 5 - i * TILE * 2, cy - TILE * 6, 14, 4);
+    // crates of "training data" along both side walls
+    for (let i = 0; i < 4; i += 1) {
+      this.addSolidDecor(TEX.Crate, TILE * 2, TILE * 6 + i * TILE * 2, 28, 8);
+      this.addSolidDecor(TEX.Crate, worldW - TILE * 3, TILE * 6 + i * TILE * 2, 28, 8);
     }
 
     this.spawnStaticChests();

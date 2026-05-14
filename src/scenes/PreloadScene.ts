@@ -41,6 +41,7 @@ export const TEX = {
   // Buildings (cut from base_out_atlas / terrain_atlas)
   Cottage: "tex_cottage",
   Building: "tex_building",
+  BuildingAlt: "tex_building_alt",
   Door: "tex_door",
   // Fences (from fence.png)
   FenceH: "tex_fence_h",
@@ -60,6 +61,8 @@ export const TEX = {
   ChestOpen: "tex_chest_open",
   ChestGold: "tex_chest_gold",
   Server: "tex_server",
+  Whiteboard: "tex_whiteboard",
+  StreetLamp: "tex_street_lamp",
   Dust: "tex_dust",
   NewsKiosk: "tex_news_kiosk",
   Bench: "tex_bench",
@@ -232,12 +235,63 @@ export class PreloadScene extends Phaser.Scene {
     this.makeChicken(TEX.Chicken);
     this.makeDuck(TEX.Duck);
     this.makeCottage(TEX.Cottage);
-    this.makeBuildingTex(TEX.Building);
+    this.makeBuildingTex(TEX.Building, 0x9c6f4a, 0x5a3520, 0x6e3f2a);
+    this.makeBuildingTex(TEX.BuildingAlt, 0xb8a07a, 0x4a4e58, 0x6e6f78);
     this.makeDoor(TEX.Door);
     this.makeFlower(TEX.FlowerRed, 0xff5670, 0xffa3b0);
     this.makeFlower(TEX.FlowerYellow, 0xffd479, 0xfff0b0);
     this.makeFlower(TEX.FlowerBlue, 0x9ad7ff, 0xc8e9ff);
     this.makeMushroom(TEX.Mushroom);
+    this.makeWhiteboard(TEX.Whiteboard);
+    this.makeStreetLamp(TEX.StreetLamp);
+  }
+
+  /**
+   * 64×32 whiteboard with marker streaks — sits on the back wall of the
+   * AI/ML Lab so the room reads as "research space" not "stone room".
+   */
+  private makeWhiteboard(key: string): void {
+    const w = 64;
+    const h = 32;
+    const g = this.add.graphics();
+    g.fillStyle(0xe6e8ee, 1).fillRect(0, 0, w, h);
+    g.fillStyle(0xc4c6d2, 1).fillRect(0, 0, w, 3);
+    g.fillStyle(0x222730, 1).fillRect(0, h - 4, w, 4);
+    // marker scribbles
+    g.fillStyle(0x9ad7ff, 1);
+    g.fillRect(5, 8, 14, 1);
+    g.fillRect(5, 11, 9, 1);
+    g.fillStyle(0xff5670, 1);
+    g.fillRect(25, 7, 20, 1);
+    g.fillRect(28, 10, 13, 2);
+    g.fillStyle(0x7fdca0, 1);
+    g.fillRect(48, 8, 10, 1);
+    g.fillRect(50, 12, 6, 1);
+    g.fillStyle(0xffd479, 1);
+    g.fillRect(7, 18, 18, 1);
+    g.fillRect(35, 20, 22, 1);
+    g.lineStyle(1, 0x000000, 0.4).strokeRect(0, 0, w, h);
+    g.generateTexture(key, w, h);
+    g.destroy();
+  }
+
+  /**
+   * 16×48 street lamp with a glowing top — used between Engineering
+   * buildings for ambient detail.
+   */
+  private makeStreetLamp(key: string): void {
+    const w = 16;
+    const h = 48;
+    const g = this.add.graphics();
+    g.fillStyle(0x2a2d35, 1).fillRect(7, 14, 2, 30); // pole
+    g.fillStyle(0x4a4e58, 1).fillRect(5, 12, 6, 4); // crossbar
+    g.fillStyle(0x4a4e58, 1).fillRect(3, 4, 10, 10); // lantern frame
+    g.fillStyle(0xffd479, 1).fillRect(5, 6, 6, 6); // lit glass
+    g.fillStyle(0xfff0b0, 1).fillRect(6, 7, 4, 4); // bright center
+    g.fillStyle(0x2a2d35, 1).fillRect(5, 0, 6, 4); // hood
+    g.fillStyle(0x2a2d35, 1).fillRect(6, 44, 4, 4); // base
+    g.generateTexture(key, w, h);
+    g.destroy();
   }
 
   private makeFlower(key: string, petal: number, light: number): void {
@@ -285,13 +339,18 @@ export class PreloadScene extends Phaser.Scene {
     g.destroy();
   }
 
-  private makeBuildingTex(key: string): void {
+  private makeBuildingTex(
+    key: string,
+    wallColor: number = 0x9c6f4a,
+    trimColor: number = 0x5a3520,
+    roofColor: number = 0x6e3f2a,
+  ): void {
     const w = 128;
     const h = 128;
     const g = this.add.graphics();
-    g.fillStyle(0x9c6f4a, 1).fillRect(0, 40, w, h - 40);
-    g.fillStyle(0x5a3520, 1).fillRect(-2, 28, w + 4, 14);
-    g.fillStyle(0x6e3f2a, 1).fillRect(0, 0, w, 30);
+    g.fillStyle(wallColor, 1).fillRect(0, 40, w, h - 40);
+    g.fillStyle(trimColor, 1).fillRect(-2, 28, w + 4, 14);
+    g.fillStyle(roofColor, 1).fillRect(0, 0, w, 30);
     g.fillStyle(0x402418, 1);
     for (let x = 0; x < w; x += 14) g.fillRect(x, 0, 1, 30);
     g.fillStyle(0x2b1c14, 1).fillRect(56, 80, 16, 48);

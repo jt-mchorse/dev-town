@@ -88,18 +88,47 @@ export class FullStackDungeonScene extends BaseZoneScene {
       onInteract: () => this.openDebug(),
     });
 
-    // crates and rubble along the corridors
-    for (let i = 0; i < 6; i += 1) {
-      this.addSolidDecor(TEX.Crate, cx - TILE * 8 + i * TILE * 3, cy - TILE, 14, 4);
+    // Crate clusters at the four corridor mouths — clusters of 2–3 read as
+    // "stuff stored here" instead of evenly-spaced lone props.
+    const clusterCrates = (x: number, y: number) => {
+      this.addSolidDecor(TEX.Crate, x, y, 14, 4);
+      this.addSolidDecor(TEX.Crate, x + TILE * 1.2, y + 4, 14, 4);
+      this.addSolidDecor(TEX.Crate, x + TILE * 0.4, y - TILE * 0.9, 14, 4);
+    };
+    clusterCrates(cx - TILE * 9, cy - TILE);
+    clusterCrates(cx + TILE * 6, cy - TILE);
+    clusterCrates(cx - TILE * 9, cy + TILE * 2);
+    clusterCrates(cx + TILE * 6, cy + TILE * 2);
+
+    // Rubble piles scattered through both corridors.
+    for (let i = 0; i < 8; i += 1) {
+      const t = (i * 0.34) % 1;
+      const onHorizontal = i % 2 === 0;
+      const x = onHorizontal
+        ? TILE * 2 + t * (worldW - TILE * 4)
+        : cx + (i % 4 - 2) * TILE;
+      const y = onHorizontal
+        ? cy + (i % 3 - 1) * TILE
+        : TILE * 2 + t * (worldH - TILE * 4);
+      // skip if inside crate clusters or on top of NPCs
+      if (Math.abs(x - cx) < TILE * 2 && Math.abs(y - cy) < TILE * 2) continue;
+      this.addDecor(TEX.Rubble, x, y, { anchorY: 0.85 });
     }
-    for (let i = 0; i < 4; i += 1) {
-      this.addDecor(TEX.Rubble, cx + TILE * 2 + i * TILE * 4, cy + TILE, { anchorY: 0.85 });
+
+    // Cobwebs at every corridor corner.
+    const webPositions: [number, number][] = [
+      [TILE * 2, cy - TILE * 1.5],
+      [worldW - TILE * 2, cy - TILE * 1.5],
+      [TILE * 2, cy + TILE * 2.5],
+      [worldW - TILE * 2, cy + TILE * 2.5],
+      [cx - TILE * 1.5, TILE * 2],
+      [cx + TILE * 1.5, TILE * 2],
+      [cx - TILE * 1.5, worldH - TILE * 3],
+      [cx + TILE * 1.5, worldH - TILE * 3],
+    ];
+    for (const [wx, wy] of webPositions) {
+      this.addDecor(TEX.Web, wx, wy, { anchorY: 0, depth: Z.Walls });
     }
-    // cobwebs in corners of corridors
-    this.addDecor(TEX.Web, TILE * 2, cy - TILE * 1.5, { anchorY: 0, depth: Z.Walls });
-    this.addDecor(TEX.Web, worldW - TILE * 2, cy - TILE * 1.5, { anchorY: 0, depth: Z.Walls });
-    this.addDecor(TEX.Web, cx + TILE * 1.5, TILE * 2, { anchorY: 0, depth: Z.Walls });
-    this.addDecor(TEX.Web, cx + TILE * 1.5, worldH - TILE * 3, { anchorY: 0, depth: Z.Walls });
 
     this.spawnStaticChests();
 
