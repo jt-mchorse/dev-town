@@ -50,36 +50,36 @@ export class TownScene extends BaseZoneScene {
       TEX.Stone,
     );
 
-    // path crossroads — high-contrast brick so exits are easy to spot
-    this.paintGround(new Phaser.Geom.Rectangle(0, cy, worldW, TILE), TEX.PathBrick);
-    this.paintGround(new Phaser.Geom.Rectangle(cx, 0, TILE, worldH), TEX.PathBrick);
-    this.paintGround(new Phaser.Geom.Rectangle(cx - TILE * 8, 0, TILE, cy), TEX.PathBrick);
-
-    // Soft dirt-grass edge strips along every brick path so the brick doesn't
-    // butt directly against grass. Inside the plaza the auto-tile ring already
-    // handles the transition, so we clip these edges to outside the plaza.
-    const plazaL = cx - TILE * 5;
-    const plazaR = cx + TILE * 5;
-    const plazaT = cy - TILE * 4;
-    const plazaB = cy + TILE * 4;
-    const paintEdgeStripH = (y: number, key: string) => {
-      // left of plaza
-      if (plazaL > 0) this.paintGround(new Phaser.Geom.Rectangle(0, y, plazaL, TILE), key);
-      // right of plaza
-      if (plazaR < worldW) this.paintGround(new Phaser.Geom.Rectangle(plazaR, y, worldW - plazaR, TILE), key);
-    };
-    const paintEdgeStripV = (x: number, key: string) => {
-      // above plaza (only for the dungeon path which only goes north)
-      if (plazaT > 0) this.paintGround(new Phaser.Geom.Rectangle(x, 0, TILE, plazaT), key);
-      // below plaza (for vertical paths that continue south)
-      if (plazaB < worldH) this.paintGround(new Phaser.Geom.Rectangle(x, plazaB, TILE, worldH - plazaB), key);
-    };
-    paintEdgeStripH(cy - TILE, "tex_gd_n");
-    paintEdgeStripH(cy + TILE, "tex_gd_s");
-    paintEdgeStripV(cx - TILE, "tex_gd_w");
-    paintEdgeStripV(cx + TILE, "tex_gd_e");
-    paintEdgeStripV(cx - TILE * 8 - TILE, "tex_gd_w");
-    paintEdgeStripV(cx - TILE * 8 + TILE, "tex_gd_e");
+    // Brick path crossroads — drawn via the brick-path auto-tile so the path
+    // ends blend into surrounding grass with proper edge tiles. Three rects:
+    // the horizontal main street, the north-south plaza axis, and the
+    // dungeon spur. The plaza itself is included in the *membership* mask
+    // (so brick cells abutting the plaza don't paint grass on the plaza
+    // side), but only path cells OUTSIDE the plaza interior are painted —
+    // inside the plaza we keep plain interior brick so the plaza's stone
+    // ring isn't clobbered by grass-edge tiles.
+    const plazaRect = new Phaser.Geom.Rectangle(cx - TILE * 5, cy - TILE * 4, TILE * 10, TILE * 8);
+    const brickRects = [
+      new Phaser.Geom.Rectangle(0, cy, worldW, TILE),         // east-west main street
+      new Phaser.Geom.Rectangle(cx, 0, TILE, worldH),          // north-south plaza axis
+      new Phaser.Geom.Rectangle(cx - TILE * 8, 0, TILE, cy),   // dungeon spur (NW)
+    ];
+    const brickCells = this.rectsToCellSet(brickRects);
+    const plazaCells = this.rectsToCellSet([plazaRect]);
+    const membershipMask = new Set<string>([...brickCells, ...plazaCells]);
+    // Paint plain interior brick on path cells inside the plaza so the
+    // brick crosses through cleanly without clobbering plaza tiles with
+    // grass overlays.
+    const insidePlaza = new Set([...brickCells].filter((k) => plazaCells.has(k)));
+    for (const cell of insidePlaza) {
+      const parts = cell.split(",");
+      const tx = Number(parts[0]);
+      const ty = Number(parts[1]);
+      this.add.image(tx * TILE, ty * TILE, "tex_bp_c").setOrigin(0, 0).setDepth(Z.Ground);
+    }
+    // Brick auto-tile on every path cell OUTSIDE the plaza.
+    const outsidePlaza = new Set([...brickCells].filter((k) => !plazaCells.has(k)));
+    this.paintRegionAutoTile(outsidePlaza, this.BRICK_PATH_AUTOTILE, undefined, membershipMask);
 
     const cyTile = Math.floor(GAME_CONFIG.worldTilesY / 2);
     const cxTile = Math.floor(GAME_CONFIG.worldTilesX / 2);

@@ -214,6 +214,7 @@ export class PreloadScene extends Phaser.Scene {
     this.makeTile(TEX.Stone, 0x6e6f78, 0x55565e, 0x83848e);
     this.makeDungeonFloor(TEX.DungeonFloor);
     this.makeStoneDirtAutoTile();
+    this.makeBrickPathAutoTile();
     this.makeTile(TEX.Dock, 0x7a5638, 0x593e26, 0x8e6645);
     this.makeTile(TEX.GrassDark, 0x2c5530, 0x224427, 0x3a6a3a);
     this.makeTile(TEX.GrassLight, 0x4d8442, 0x3f6f37, 0x5e9750);
@@ -479,6 +480,137 @@ export class PreloadScene extends Phaser.Scene {
     paintCorner("tex_sd_cne", {}, "ne");
     paintCorner("tex_sd_csw", {}, "sw");
     paintCorner("tex_sd_cse", {}, "se");
+  }
+
+  /**
+   * Brick-path auto-tile set — covers the union of three brick paths in the
+   * Town. The set has the standard 9 base tiles plus strips, end-caps, and
+   * an isolated single-cell variant so 1-tile-wide paths end into grass
+   * cleanly instead of clipping at world edges.
+   *
+   * Layout convention (all 16 tiles):
+   *   c                = solid brick interior
+   *   n/s/e/w          = brick with grass overlay on one side
+   *   nw/ne/sw/se      = brick with grass on two adjacent sides (outer corner)
+   *   hs/vs            = horizontal/vertical strip (grass on both opposite sides)
+   *   capN/S/E/W       = endcap with grass on three sides (direction = open side)
+   *   iso              = grass surrounding a small brick blob
+   */
+  private makeBrickPathAutoTile(): void {
+    const size = GAME_CONFIG.tileSize; // 32
+    const grass = 0x4d8442;
+    const grassDark = 0x3f6f37;
+    const grassLight = 0x5e9750;
+    const brick = 0x9b5a3c;
+    const brickDark = 0x6e3a26;
+    const brickLight = 0xb37155;
+    const mortar = 0x4a3024;
+
+    const STRIP = 10; // px of grass blend on each "out" side
+
+    const paintBrick = (
+      g: Phaser.GameObjects.Graphics,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+    ) => {
+      g.fillStyle(brick, 1).fillRect(x, y, w, h);
+      // running-bond brick pattern: 16-wide × 8-tall bricks, alternating offsets
+      g.fillStyle(mortar, 1);
+      // horizontal mortar lines every 8 px
+      for (let by = 0; by <= h; by += 8) {
+        g.fillRect(x, y + by, w, 1);
+      }
+      // vertical mortar lines, offset every other row
+      for (let by = 0; by < h; by += 8) {
+        const row = Math.floor((y + by) / 8);
+        const offset = (row % 2) * 8;
+        for (let bx = offset; bx <= w; bx += 16) {
+          g.fillRect(x + bx, y + by, 1, 8);
+        }
+      }
+      // a few highlight specks for warmth
+      g.fillStyle(brickLight, 0.6);
+      for (let i = 0; i < 4; i += 1) {
+        const sx = x + ((i * 11) % w);
+        const sy = y + ((i * 7) % h);
+        g.fillRect(sx, sy, 1, 1);
+      }
+      g.fillStyle(brickDark, 0.5);
+      for (let i = 0; i < 3; i += 1) {
+        const sx = x + ((i * 17) % w);
+        const sy = y + ((i * 13) % h);
+        g.fillRect(sx, sy, 1, 1);
+      }
+    };
+
+    const paintGrass = (
+      g: Phaser.GameObjects.Graphics,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+    ) => {
+      g.fillStyle(grass, 1).fillRect(x, y, w, h);
+      // dither for organic feel
+      g.fillStyle(grassDark, 1);
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(x + ((i * 7) % w), y + ((i * 11) % h), 1, 1);
+      }
+      g.fillStyle(grassLight, 1);
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(x + ((i * 13) % w), y + ((i * 17) % h), 1, 1);
+      }
+    };
+
+    const paintTile = (
+      key: string,
+      out: { n?: boolean; s?: boolean; e?: boolean; w?: boolean },
+    ) => {
+      const g = this.add.graphics();
+      // Base = brick fill
+      paintBrick(g, 0, 0, size, size);
+      // Overlay grass on every "out" side
+      if (out.n) {
+        paintGrass(g, 0, 0, size, STRIP);
+        g.fillStyle(grassDark, 0.55).fillRect(0, STRIP, size, 2);
+      }
+      if (out.s) {
+        paintGrass(g, 0, size - STRIP, size, STRIP);
+        g.fillStyle(grassDark, 0.55).fillRect(0, size - STRIP - 2, size, 2);
+      }
+      if (out.w) {
+        paintGrass(g, 0, 0, STRIP, size);
+        g.fillStyle(grassDark, 0.55).fillRect(STRIP, 0, 2, size);
+      }
+      if (out.e) {
+        paintGrass(g, size - STRIP, 0, STRIP, size);
+        g.fillStyle(grassDark, 0.55).fillRect(size - STRIP - 2, 0, 2, size);
+      }
+      g.generateTexture(key, size, size);
+      g.destroy();
+    };
+
+    paintTile("tex_bp_c", {});
+    paintTile("tex_bp_n", { n: true });
+    paintTile("tex_bp_s", { s: true });
+    paintTile("tex_bp_e", { e: true });
+    paintTile("tex_bp_w", { w: true });
+    paintTile("tex_bp_nw", { n: true, w: true });
+    paintTile("tex_bp_ne", { n: true, e: true });
+    paintTile("tex_bp_sw", { s: true, w: true });
+    paintTile("tex_bp_se", { s: true, e: true });
+    // Strips (1-cell-wide paths between two grass strips)
+    paintTile("tex_bp_hs", { n: true, s: true });
+    paintTile("tex_bp_vs", { e: true, w: true });
+    // Endcaps: open on one side only
+    paintTile("tex_bp_capE", { n: true, s: true, w: true }); // open east
+    paintTile("tex_bp_capW", { n: true, s: true, e: true }); // open west
+    paintTile("tex_bp_capN", { e: true, w: true, s: true }); // open north
+    paintTile("tex_bp_capS", { e: true, w: true, n: true }); // open south
+    // Fully isolated brick cell (grass on all 4 sides)
+    paintTile("tex_bp_iso", { n: true, s: true, e: true, w: true });
   }
 
   /**

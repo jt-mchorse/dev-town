@@ -45,16 +45,29 @@ export interface WarpSpec {
 }
 
 /**
- * 9 base + 4 optional concave-corner tile keys for cell-mask auto-tiling.
- * Concave keys are used when an interior cell sits at the inner corner of
- * two adjacent regions — its diagonal neighbor is *outside* the region and
- * the outer terrain bleeds into that corner only.
+ * Tile keys used by the cell-mask auto-tile painter.
+ *
+ * The 9 required entries (nw/n/ne/w/c/e/sw/s/se) cover a single isolated
+ * rect. The optional entries cover shapes that can't be expressed as a
+ * single rect:
+ *   - `c{nw,ne,sw,se}`: concave (inner-corner) intrusions when two regions
+ *     meet diagonally.
+ *   - `hs`/`vs`: 1-cell-wide horizontal / vertical strips (path "tubes").
+ *   - `cap{N,S,E,W}`: endcap cells of a 1-wide path; the directional letter
+ *     is the side the path EXITS from (so `capE` has its only neighbor on
+ *     the east).
+ *   - `iso`: a completely isolated single cell.
+ *
+ * Sets without these keys fall back to the closest base tile.
  */
 export interface AutoTileSet {
   nw: string; n: string; ne: string;
   w: string; c: string; e: string;
   sw: string; s: string; se: string;
   cnw?: string; cne?: string; csw?: string; cse?: string;
+  hs?: string; vs?: string;
+  capN?: string; capS?: string; capE?: string; capW?: string;
+  iso?: string;
 }
 
 export abstract class BaseZoneScene extends Phaser.Scene {
@@ -335,21 +348,36 @@ export abstract class BaseZoneScene extends Phaser.Scene {
     cnw: "tex_sd_cnw", cne: "tex_sd_cne", csw: "tex_sd_csw", cse: "tex_sd_cse",
   };
 
+  protected readonly BRICK_PATH_AUTOTILE: AutoTileSet = {
+    nw: "tex_bp_nw", n: "tex_bp_n", ne: "tex_bp_ne",
+    w: "tex_bp_w", c: "tex_bp_c", e: "tex_bp_e",
+    sw: "tex_bp_sw", s: "tex_bp_s", se: "tex_bp_se",
+    hs: "tex_bp_hs", vs: "tex_bp_vs",
+    capN: "tex_bp_capN", capS: "tex_bp_capS",
+    capE: "tex_bp_capE", capW: "tex_bp_capW",
+    iso: "tex_bp_iso",
+  };
+
   /**
    * Cell-mask auto-tile painter. Takes a set of `"tx,ty"` cell keys (any
    * shape — multiple rects, an L-shape, an arbitrary blob), and paints each
-   * cell with the correct edge/corner/interior tile by inspecting its 8
-   * neighbors. Concave-corner tiles (the `c{nw,ne,sw,se}` keys on the set)
-   * are used at interior cells whose diagonal neighbor is *outside* the
-   * region — i.e. the inner corner where two regions meet. Falls back to
-   * the plain interior tile for sets without concave variants.
+   * cell with the correct edge/corner/strip/interior tile by inspecting
+   * its 8 neighbors.
+   *
+   * `membershipMask` overrides which cells count as "in" for neighbor
+   * checks — useful when a path extends INTO an adjacent region (e.g. a
+   * brick path entering a stone plaza). Cells in `membershipMask` but not
+   * in `cellSet` aren't painted, but they prevent edge-blending at their
+   * boundary with `cellSet`.
    */
   protected paintRegionAutoTile(
     cellSet: Set<string>,
     set: AutoTileSet,
     interior?: string,
+    membershipMask?: Set<string>,
   ): void {
-    const inSet = (tx: number, ty: number) => cellSet.has(`${tx},${ty}`);
+    const mask = membershipMask ?? cellSet;
+    const inSet = (tx: number, ty: number) => mask.has(`${tx},${ty}`);
     for (const cellKey of cellSet) {
       const parts = cellKey.split(",");
       const tx = Number(parts[0]);
@@ -371,10 +399,21 @@ export abstract class BaseZoneScene extends Phaser.Scene {
         else if (!NE) key = set.cne ?? key;
         else if (!SW) key = set.csw ?? key;
         else if (!SE) key = set.cse ?? key;
-      } else if (!N && !W) key = set.nw;
+      } else if (!N && !S && !W && !E) key = set.iso ?? set.c;
+      // 3 sides out → endcap (only one neighbor)
+      else if (!N && !S && !W) key = set.capE ?? set.w ?? set.c;
+      else if (!N && !S && !E) key = set.capW ?? set.e ?? set.c;
+      else if (!W && !E && !S) key = set.capN ?? set.s ?? set.c;
+      else if (!W && !E && !N) key = set.capS ?? set.n ?? set.c;
+      // 2 opposite sides out → 1-wide strip
+      else if (!N && !S) key = set.hs ?? set.c;
+      else if (!E && !W) key = set.vs ?? set.c;
+      // 2 adjacent sides out → convex corner
+      else if (!N && !W) key = set.nw;
       else if (!N && !E) key = set.ne;
       else if (!S && !W) key = set.sw;
       else if (!S && !E) key = set.se;
+      // 1 side out → edge
       else if (!N) key = set.n;
       else if (!S) key = set.s;
       else if (!W) key = set.w;
