@@ -46,7 +46,8 @@ export class NPC {
     const body = this.character.container.body as Phaser.Physics.Arcade.Body;
     body.setImmovable(true);
     body.moves = false;
-    this.character.faceDirection(spec.facing ?? "down");
+    const defaultFacing: Direction = spec.facing ?? "down";
+    this.character.faceDirection(defaultFacing);
 
     // subtle idle bob
     scene.tweens.add({
@@ -56,6 +57,25 @@ export class NPC {
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut",
+    });
+
+    // occasional "look around" — every 6–14 s, glance left/right then snap
+    // back to the spec's default facing. Adds life without breaking the
+    // NPC's "stationed here" posture.
+    const lookDirs: Direction[] = ["left", "right"];
+    const glance = () => {
+      if (!this.character.container.active) return;
+      const dir = lookDirs[Math.floor(Math.random() * lookDirs.length)];
+      this.character.faceDirection(dir);
+      scene.time.delayedCall(900 + Math.floor(Math.random() * 700), () => {
+        if (!this.character.container.active) return;
+        this.character.faceDirection(defaultFacing);
+      });
+    };
+    scene.time.addEvent({
+      delay: 6000 + Math.floor(Math.random() * 8000),
+      loop: true,
+      callback: glance,
     });
 
     if (spec.label) {

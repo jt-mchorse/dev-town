@@ -72,10 +72,41 @@ export class FishingDockScene extends BaseZoneScene {
       { speaker: "Dock Sign", text: "When the bobber dips, hammer E. Don't be a Heisenbug about it." },
     ]);
 
-    // fishing spot at the end of the dock
+    // fishing spot at the end of the dock — animated bobber drifting just
+    // off the dock end so the spot reads as "where you cast"
     const fishX = dockX + TILE;
     const fishY = dockY + dockH - TILE / 2;
-    this.add.image(fishX, fishY + TILE * 1.5, TEX.Bobber).setDepth(Z.GroundDecal).setAlpha(0.4);
+    const bobber = this.add
+      .image(fishX, fishY + TILE * 1.5, TEX.Bobber)
+      .setDepth(Z.GroundDecal)
+      .setAlpha(0.85);
+    this.tweens.add({
+      targets: bobber,
+      y: bobber.y - 2,
+      duration: 900 + Math.random() * 200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    // A couple more bobbers floating in the open water for ambient life.
+    for (let i = 0; i < 3; i += 1) {
+      const bx = TILE * 4 + i * TILE * 7;
+      const by = waterTop + TILE * 4 + (i % 2 === 0 ? 0 : TILE * 3);
+      if (Math.abs(bx - (dockX + TILE)) < TILE * 3) continue;
+      const drift = this.add
+        .image(bx, by, TEX.Bobber)
+        .setDepth(Z.GroundDecal)
+        .setAlpha(0.7);
+      this.tweens.add({
+        targets: drift,
+        y: drift.y - 2,
+        duration: 1000 + Math.random() * 400,
+        yoyo: true,
+        repeat: -1,
+        delay: i * 250,
+        ease: "Sine.easeInOut",
+      });
+    }
     this.addPointInteract({
       x: fishX,
       y: fishY,
