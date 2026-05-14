@@ -83,6 +83,18 @@ export class EngineeringDistrictScene extends BaseZoneScene {
       // sand shoulder — keeps the whole building + NPC label inside the
       // camera viewport even when the player walks the avenue.
       const by = cy - TILE - BUILDING_H;
+
+      // packed-earth foundation around the building so it doesn't butt
+      // straight into stone pavers
+      const foundationX = bx - TILE;
+      const foundationY = by - TILE / 2;
+      const foundationW = BUILDING_W + TILE * 2;
+      const foundationH = BUILDING_H + TILE * 2;
+      this.paintRectWithAutoTileBorder(
+        new Phaser.Geom.Rectangle(foundationX, foundationY, foundationW, foundationH),
+        this.GRASS_DIRT_AUTOTILE,
+      );
+
       this.add.image(bx, by, TEX.Building).setDepth(Z.Walls + 1).setOrigin(0, 0);
       // (no standalone building label — the NPC label below conveys the
       // building name as the company tag, and the dialog reveals the role.)

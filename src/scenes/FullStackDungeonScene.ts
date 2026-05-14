@@ -35,7 +35,7 @@ export class FullStackDungeonScene extends BaseZoneScene {
   }
 
   protected buildZone(worldW: number, worldH: number): void {
-    this.paintWholeFloor(worldW, worldH, TEX.Wall);
+    this.paintWholeFloor(worldW, worldH, TEX.DungeonFloor);
 
     // dungeon corridors of stone
     const cy = Math.floor(GAME_CONFIG.worldTilesY / 2) * TILE;

@@ -49,6 +49,7 @@ export const TEX = {
   // Procedural fallbacks (not in atlas)
   Wall: "tex_wall",
   Stone: "tex_stone",
+  DungeonFloor: "tex_dungeon_floor",
   Dock: "tex_dock",
   GrassDark: "tex_grass_dark",
   GrassLight: "tex_grass_light",
@@ -208,6 +209,7 @@ export class PreloadScene extends Phaser.Scene {
   private makeProcedural(): void {
     this.makeTile(TEX.Wall, 0x4a5060, 0x2c2f36, 0x5e6477);
     this.makeTile(TEX.Stone, 0x6e6f78, 0x55565e, 0x83848e);
+    this.makeDungeonFloor(TEX.DungeonFloor);
     this.makeTile(TEX.Dock, 0x7a5638, 0x593e26, 0x8e6645);
     this.makeTile(TEX.GrassDark, 0x2c5530, 0x224427, 0x3a6a3a);
     this.makeTile(TEX.GrassLight, 0x4d8442, 0x3f6f37, 0x5e9750);
@@ -312,6 +314,37 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0xffd479, 1).fillRect(20, 22, 4, 4);
     g.lineStyle(1, 0x000000, 0.6).strokeRect(0, 0, 28, 44);
     g.generateTexture(key, 28, 44);
+    g.destroy();
+  }
+
+  /**
+   * Dungeon-style flagstone floor — large rectangular pavers separated by
+   * dark grout lines so the corridor reads as worked stone instead of the
+   * generic procedural placeholder.
+   */
+  private makeDungeonFloor(key: string): void {
+    const size = GAME_CONFIG.tileSize; // 32
+    const g = this.add.graphics();
+    // base stone
+    g.fillStyle(0x4a4e58, 1).fillRect(0, 0, size, size);
+    // grout cross — splits the tile into 4 flagstones
+    g.fillStyle(0x2a2d35, 1).fillRect(0, size / 2 - 1, size, 2);
+    g.fillStyle(0x2a2d35, 1).fillRect(size / 2 - 1, 0, 2, size);
+    // light specks for texture
+    g.fillStyle(0x5e6473, 1);
+    for (let i = 0; i < 6; i += 1) {
+      const x = (i * 7 + 3) % size;
+      const y = (i * 11 + 5) % size;
+      g.fillRect(x, y, 1, 1);
+    }
+    // dark specks
+    g.fillStyle(0x363942, 1);
+    for (let i = 0; i < 4; i += 1) {
+      const x = (i * 9 + 1) % size;
+      const y = (i * 13 + 7) % size;
+      g.fillRect(x, y, 1, 1);
+    }
+    g.generateTexture(key, size, size);
     g.destroy();
   }
 
