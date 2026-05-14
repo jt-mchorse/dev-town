@@ -44,6 +44,19 @@ export interface WarpSpec {
   facing?: Direction;
 }
 
+/**
+ * 9 base + 4 optional concave-corner tile keys for cell-mask auto-tiling.
+ * Concave keys are used when an interior cell sits at the inner corner of
+ * two adjacent regions — its diagonal neighbor is *outside* the region and
+ * the outer terrain bleeds into that corner only.
+ */
+export interface AutoTileSet {
+  nw: string; n: string; ne: string;
+  w: string; c: string; e: string;
+  sw: string; s: string; se: string;
+  cnw?: string; cne?: string; csw?: string; cse?: string;
+}
+
 export abstract class BaseZoneScene extends Phaser.Scene {
   abstract readonly sceneKey: string;
   abstract readonly zoneTitle: string;
@@ -281,11 +294,7 @@ export abstract class BaseZoneScene extends Phaser.Scene {
    */
   protected paintRectWithAutoTileBorder(
     rect: Phaser.Geom.Rectangle,
-    set: {
-      nw: string; n: string; ne: string;
-      w: string; c: string; e: string;
-      sw: string; s: string; se: string;
-    },
+    set: AutoTileSet,
     interior?: string,
   ): void {
     const startTx = Math.floor(rect.x / TILE);
@@ -313,17 +322,84 @@ export abstract class BaseZoneScene extends Phaser.Scene {
     }
   }
 
-  protected readonly GRASS_DIRT_AUTOTILE = {
+  protected readonly GRASS_DIRT_AUTOTILE: AutoTileSet = {
     nw: "tex_gd_nw", n: "tex_gd_n", ne: "tex_gd_ne",
     w: "tex_gd_w", c: "tex_gd_c", e: "tex_gd_e",
     sw: "tex_gd_sw", s: "tex_gd_s", se: "tex_gd_se",
   };
 
-  protected readonly STONE_DIRT_AUTOTILE = {
+  protected readonly STONE_DIRT_AUTOTILE: AutoTileSet = {
     nw: "tex_sd_nw", n: "tex_sd_n", ne: "tex_sd_ne",
     w: "tex_sd_w", c: "tex_sd_c", e: "tex_sd_e",
     sw: "tex_sd_sw", s: "tex_sd_s", se: "tex_sd_se",
+    cnw: "tex_sd_cnw", cne: "tex_sd_cne", csw: "tex_sd_csw", cse: "tex_sd_cse",
   };
+
+  /**
+   * Cell-mask auto-tile painter. Takes a set of `"tx,ty"` cell keys (any
+   * shape — multiple rects, an L-shape, an arbitrary blob), and paints each
+   * cell with the correct edge/corner/interior tile by inspecting its 8
+   * neighbors. Concave-corner tiles (the `c{nw,ne,sw,se}` keys on the set)
+   * are used at interior cells whose diagonal neighbor is *outside* the
+   * region — i.e. the inner corner where two regions meet. Falls back to
+   * the plain interior tile for sets without concave variants.
+   */
+  protected paintRegionAutoTile(
+    cellSet: Set<string>,
+    set: AutoTileSet,
+    interior?: string,
+  ): void {
+    const inSet = (tx: number, ty: number) => cellSet.has(`${tx},${ty}`);
+    for (const cellKey of cellSet) {
+      const parts = cellKey.split(",");
+      const tx = Number(parts[0]);
+      const ty = Number(parts[1]);
+      const N = inSet(tx, ty - 1);
+      const S = inSet(tx, ty + 1);
+      const W = inSet(tx - 1, ty);
+      const E = inSet(tx + 1, ty);
+
+      let key: string = interior ?? set.c;
+
+      if (N && S && W && E) {
+        // Interior cell; check diagonals for concave corner intrusion.
+        const NW = inSet(tx - 1, ty - 1);
+        const NE = inSet(tx + 1, ty - 1);
+        const SW = inSet(tx - 1, ty + 1);
+        const SE = inSet(tx + 1, ty + 1);
+        if (!NW) key = set.cnw ?? key;
+        else if (!NE) key = set.cne ?? key;
+        else if (!SW) key = set.csw ?? key;
+        else if (!SE) key = set.cse ?? key;
+      } else if (!N && !W) key = set.nw;
+      else if (!N && !E) key = set.ne;
+      else if (!S && !W) key = set.sw;
+      else if (!S && !E) key = set.se;
+      else if (!N) key = set.n;
+      else if (!S) key = set.s;
+      else if (!W) key = set.w;
+      else if (!E) key = set.e;
+
+      this.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(Z.Ground);
+    }
+  }
+
+  /** Convert one or more rects into a flat cell-key set for `paintRegionAutoTile`. */
+  protected rectsToCellSet(rects: Phaser.Geom.Rectangle[]): Set<string> {
+    const cells = new Set<string>();
+    for (const r of rects) {
+      const startTx = Math.floor(r.x / TILE);
+      const startTy = Math.floor(r.y / TILE);
+      const endTx = Math.ceil((r.x + r.width) / TILE);
+      const endTy = Math.ceil((r.y + r.height) / TILE);
+      for (let ty = startTy; ty < endTy; ty += 1) {
+        for (let tx = startTx; tx < endTx; tx += 1) {
+          cells.add(`${tx},${ty}`);
+        }
+      }
+    }
+    return cells;
+  }
 
   /**
    * Tile-aligned ground painter that draws a base tile and randomly substitutes

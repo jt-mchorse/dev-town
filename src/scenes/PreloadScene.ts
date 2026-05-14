@@ -406,9 +406,12 @@ export class PreloadScene extends Phaser.Scene {
       }
     };
 
+    const STRIP = 12; // px of stone visible on each outer edge
+
     const paintCorner = (
       key: string,
       outerSides: { n?: boolean; e?: boolean; s?: boolean; w?: boolean },
+      concaveCorner?: "nw" | "ne" | "sw" | "se",
     ) => {
       const g = this.add.graphics();
       // base = inner terrain (dirt)
@@ -416,7 +419,6 @@ export class PreloadScene extends Phaser.Scene {
       dither(g, dirtDark, 1);
       dither(g, dirtLight, 3);
       // overlay the outer terrain (stone) on the requested sides
-      const STRIP = 12; // px of stone visible on each outer edge
       if (outerSides.n) {
         g.fillStyle(stone, 1).fillRect(0, 0, size, STRIP);
         // soft fringe so the boundary doesn't look like a hard cut
@@ -434,8 +436,26 @@ export class PreloadScene extends Phaser.Scene {
         g.fillStyle(stone, 1).fillRect(size - STRIP, 0, STRIP, size);
         g.fillStyle(stoneDark, 0.65).fillRect(size - STRIP - 2, 0, 2, size);
       }
-      // ambient texture on the stone
-      if (outerSides.n || outerSides.s || outerSides.w || outerSides.e) {
+      // Concave wedge: stone intrudes into ONE corner only (the cell sits at
+      // the inner-corner where two dirt regions meet diagonally).
+      if (concaveCorner) {
+        const cx = concaveCorner.includes("e") ? size - STRIP : 0;
+        const cy = concaveCorner.includes("s") ? size - STRIP : 0;
+        g.fillStyle(stone, 1).fillRect(cx, cy, STRIP, STRIP);
+        // soft fringe on the two inner edges of the wedge
+        if (concaveCorner.startsWith("n")) {
+          g.fillStyle(stoneDark, 0.65).fillRect(cx, STRIP, STRIP, 2);
+        } else {
+          g.fillStyle(stoneDark, 0.65).fillRect(cx, size - STRIP - 2, STRIP, 2);
+        }
+        if (concaveCorner.endsWith("w")) {
+          g.fillStyle(stoneDark, 0.65).fillRect(STRIP, cy, 2, STRIP);
+        } else {
+          g.fillStyle(stoneDark, 0.65).fillRect(size - STRIP - 2, cy, 2, STRIP);
+        }
+      }
+      // ambient texture on any stone painted
+      if (outerSides.n || outerSides.s || outerSides.w || outerSides.e || concaveCorner) {
         dither(g, stoneDark, 5);
         dither(g, stoneLight, 7);
       }
@@ -452,6 +472,13 @@ export class PreloadScene extends Phaser.Scene {
     paintCorner("tex_sd_sw", { s: true, w: true });
     paintCorner("tex_sd_s", { s: true });
     paintCorner("tex_sd_se", { s: true, e: true });
+    // Concave (inner-corner) variants: used when two stone-dirt regions touch
+    // diagonally and an interior cell needs a stone wedge intruding into one
+    // of its corners. paintRegionAutoTile picks these by inspecting diagonals.
+    paintCorner("tex_sd_cnw", {}, "nw");
+    paintCorner("tex_sd_cne", {}, "ne");
+    paintCorner("tex_sd_csw", {}, "sw");
+    paintCorner("tex_sd_cse", {}, "se");
   }
 
   /**
