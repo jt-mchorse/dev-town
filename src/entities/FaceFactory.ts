@@ -28,14 +28,30 @@ export const FACE_FRAME: Record<Direction, number> = {
 };
 
 // LPC head anatomy (frame is 64×64, character centered):
-// Hair fringe occupies roughly y=14..22; safe eye line is y=23..26 to avoid
-// clipping behind hair on most variants. Mouth at y=29..30.
-// Eyes are 3×3 blocks with a tiny white catchlight in the upper-left,
-// which gives the face a clear "looking at you" read at gameplay scale.
-const EYE_Y = 23;
-const MOUTH_Y = 29;
+//   y=14..22  hair fringe region (overlay sits behind hair, occluded here)
+//   y=18..30  head skin region (we paint a skin patch here to cover LPC's
+//             tiny native facial pixels and host our larger cartoon features)
+// Vertical layout of features inside that patch:
+//   y=21  eyebrows
+//   y=23..25  eyes (3 rows)
+//   y=27  nose tint
+//   y=28  cheek blush
+//   y=29  mouth
+//   y=30  smile dimples
 const CENTER_X = 32;
+const BROW_Y = 21;
+const EYE_Y = 23;
+const NOSE_Y = 27;
+const BLUSH_Y = 28;
+const MOUTH_Y = 29;
 
+// Palette tuned to match the LPC light-skin body sheet so the painted head
+// patch reads as the same character, not a cutout. (We currently only ship
+// bodyTone="light"; revisit when adding more.)
+const SKIN = "#f4c590";
+const SKIN_SHADE = "#d4a06e";
+const BLUSH = "#e89580";
+const BROW_COLOR = "#6e4a24";
 const EYE_COLOR = "#1a1d24";
 const EYE_HIGHLIGHT = "#f4f6fa";
 const MOUTH_COLOR = "#2a1d1d";
@@ -48,11 +64,46 @@ function drawEye(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   ctx.fillRect(x, y, 1, 1);
 }
 
+/** Paint a soft-cornered skin patch covering the LPC face region. */
+function paintHeadPatch(
+  ctx: CanvasRenderingContext2D,
+  ox: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  ctx.fillStyle = SKIN;
+  ctx.fillRect(ox + x, y, w, h);
+  // Round each corner by clearing one pixel — turns the rectangle into
+  // a rough oval at this resolution.
+  ctx.clearRect(ox + x, y, 1, 1);
+  ctx.clearRect(ox + x + w - 1, y, 1, 1);
+  ctx.clearRect(ox + x, y + h - 1, 1, 1);
+  ctx.clearRect(ox + x + w - 1, y + h - 1, 1, 1);
+  // Soft jawline shade — bottom row, one px in from each side.
+  ctx.fillStyle = SKIN_SHADE;
+  ctx.fillRect(ox + x + 1, y + h - 1, w - 2, 1);
+}
+
 function drawDownFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  // Two eyes — 3×3, separated so they read clearly even at native scale.
+  // Skin patch (14 wide × 13 tall): hides the LPC face beneath ours.
+  paintHeadPatch(ctx, ox, 25, 18, 14, 13);
+  // Brows — a touch above the eyes, give the face attitude.
+  ctx.fillStyle = BROW_COLOR;
+  ctx.fillRect(ox + CENTER_X - 6, BROW_Y, 3, 1);
+  ctx.fillRect(ox + CENTER_X + 3, BROW_Y, 3, 1);
+  // Eyes
   drawEye(ctx, ox + CENTER_X - 6, EYE_Y);
   drawEye(ctx, ox + CENTER_X + 3, EYE_Y);
-  // Mouth: 4×1 line with two slightly-lower pixels at the ends for a smile.
+  // Nose: single shaded pixel between the eyes, dropped two rows.
+  ctx.fillStyle = SKIN_SHADE;
+  ctx.fillRect(ox + CENTER_X - 1, NOSE_Y, 2, 1);
+  // Cheek blush — a hint of warmth either side of the nose.
+  ctx.fillStyle = BLUSH;
+  ctx.fillRect(ox + CENTER_X - 6, BLUSH_Y, 2, 1);
+  ctx.fillRect(ox + CENTER_X + 4, BLUSH_Y, 2, 1);
+  // Mouth: 4-px line + two smile-curl dimples at the corners.
   ctx.fillStyle = MOUTH_COLOR;
   ctx.fillRect(ox + CENTER_X - 2, MOUTH_Y, 4, 1);
   ctx.fillRect(ox + CENTER_X - 3, MOUTH_Y + 1, 1, 1);
@@ -60,16 +111,48 @@ function drawDownFace(ctx: CanvasRenderingContext2D, ox: number): void {
 }
 
 function drawLeftFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  // Single 3×3 eye + short profile mouth on the visible (left) half.
-  drawEye(ctx, ox + CENTER_X - 5, EYE_Y);
+  // Half-head patch on the visible (left) half. 8 wide so it lands on the
+  // LPC face's left side when the body sprite shifts for the left walk row.
+  paintHeadPatch(ctx, ox, 24, 18, 9, 13);
+  // Brow over the visible eye
+  ctx.fillStyle = BROW_COLOR;
+  ctx.fillRect(ox + CENTER_X - 7, BROW_Y, 3, 1);
+  // Profile eye
+  drawEye(ctx, ox + CENTER_X - 7, EYE_Y);
+  // Tiny nose nub at the far-left edge
+  ctx.fillStyle = SKIN_SHADE;
+  ctx.fillRect(ox + 24, NOSE_Y, 1, 1);
+  // Profile mouth
   ctx.fillStyle = MOUTH_COLOR;
   ctx.fillRect(ox + CENTER_X - 7, MOUTH_Y, 3, 1);
 }
 
 function drawRightFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  drawEye(ctx, ox + CENTER_X + 2, EYE_Y);
+  paintHeadPatch(ctx, ox, 31, 18, 9, 13);
+  ctx.fillStyle = BROW_COLOR;
+  ctx.fillRect(ox + CENTER_X + 4, BROW_Y, 3, 1);
+  drawEye(ctx, ox + CENTER_X + 4, EYE_Y);
+  ctx.fillStyle = SKIN_SHADE;
+  ctx.fillRect(ox + 39, NOSE_Y, 1, 1);
   ctx.fillStyle = MOUTH_COLOR;
   ctx.fillRect(ox + CENTER_X + 4, MOUTH_Y, 3, 1);
+}
+
+/**
+ * Paint the back-of-head silhouette: a slim skin sliver showing one ear,
+ * but no facial features. Keeps the head from looking transparent when
+ * the player walks north.
+ */
+function drawUpFace(ctx: CanvasRenderingContext2D, ox: number): void {
+  // Two narrow skin slivers at the edges of the head (the ears that peek
+  // around behind the hair). The body sheet already paints the back-of-head
+  // shape; we just reinforce the ear positions.
+  ctx.fillStyle = SKIN;
+  ctx.fillRect(ox + 25, 22, 1, 3); // left ear
+  ctx.fillRect(ox + 38, 22, 1, 3); // right ear
+  ctx.fillStyle = SKIN_SHADE;
+  ctx.fillRect(ox + 25, 24, 1, 1);
+  ctx.fillRect(ox + 38, 24, 1, 1);
 }
 
 /**
@@ -89,12 +172,13 @@ export function buildFaceOverlay(scene: Phaser.Scene): void {
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, sheetW, FRAME);
 
-  // Frame 0: down
+  // Frame 0: down (facing camera — full face)
   drawDownFace(ctx, 0);
-  // Frame 1: up — back of head, leave transparent
-  // Frame 2: left
+  // Frame 1: up (back of head — ears only)
+  drawUpFace(ctx, FRAME * FACE_FRAME.up);
+  // Frame 2: left profile
   drawLeftFace(ctx, FRAME * FACE_FRAME.left);
-  // Frame 3: right
+  // Frame 3: right profile
   drawRightFace(ctx, FRAME * FACE_FRAME.right);
 
   // Define the 4 sub-frames on the canvas texture so `setFrame(0..3)` works.

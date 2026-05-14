@@ -72,8 +72,10 @@ export function buildPortrait(scene: Phaser.Scene, a: Appearance): string {
   const sx = col * FRAME_SIZE + (FRAME_SIZE - SOURCE_CROP) / 2; // center
   const sy = row * FRAME_SIZE;
 
+  // Composite every LPC layer (body, shoes, pants, shirt, hair, hat) FIRST.
+  // The face is painted LAST so heavy fringes (bob, long hair) and hat brims
+  // can't hide the cartoon expression — readability beats realistic occlusion.
   for (const slot of LAYER_ORDER) {
-    if (slot === "hair" || slot === "hat") continue; // drawn last, after face
     const texKey = textureKeyForSlot(a, slot);
     if (!texKey || !scene.textures.exists(texKey)) continue;
     const src = scene.textures.get(texKey).getSourceImage() as
@@ -97,51 +99,52 @@ export function buildPortrait(scene: Phaser.Scene, a: Appearance): string {
     }
   }
 
-  // Big-eye face overlay: paint cartoony eyes + mouth at portrait scale so
-  // the dialog face matches the in-world overlay. Portrait is 96×96 covering
-  // the top 32×32 of the LPC frame at 3×, so 1 source-px = 3 portrait-px.
-  // Source-space eye coords match FaceFactory: (26,23) and (35,23), 3×3 each.
+  // Filled cartoon face on top. Mirrors FaceFactory's down-frame layout at 3×
+  // (portrait is 96×96 covering the top 32×32 of the LPC frame, so 1 source-px
+  // = 3 portrait-px). Order: skin patch → brows → eyes (with catchlight) →
+  // nose → blush → mouth → dimples.
+  const sp = (sx: number, sy: number, sw: number, sh: number): [number, number, number, number] =>
+    [(sx - 16) * 3, sy * 3, sw * 3, sh * 3];
+
+  // Skin patch — opaque, hides whatever hair/hat tried to paint over the face.
+  ctx.fillStyle = "#f4c590";
+  ctx.fillRect(...sp(25, 18, 14, 13));
+  ctx.clearRect(...sp(25, 18, 1, 1));
+  ctx.clearRect(...sp(38, 18, 1, 1));
+  ctx.clearRect(...sp(25, 30, 1, 1));
+  ctx.clearRect(...sp(38, 30, 1, 1));
+  // Jawline shade
+  ctx.fillStyle = "#d4a06e";
+  ctx.fillRect(...sp(26, 30, 12, 1));
+
+  // Brows
+  ctx.fillStyle = "#6e4a24";
+  ctx.fillRect(...sp(26, 21, 3, 1));
+  ctx.fillRect(...sp(35, 21, 3, 1));
+
+  // Eyes: source (26,23) and (35,23), 3×3 each
   ctx.fillStyle = "#1a1d24";
-  // Left eye: source (26,23) 3×3 → portrait ((26-16)*3, 23*3) = (30, 69), 9×9
-  ctx.fillRect(30, 69, 9, 9);
-  // Right eye: source (35,23) 3×3 → portrait (57, 69), 9×9
-  ctx.fillRect(57, 69, 9, 9);
-  // Eye catchlights (upper-left 1-px in source → 3-px in portrait)
+  ctx.fillRect(...sp(26, 23, 3, 3));
+  ctx.fillRect(...sp(35, 23, 3, 3));
+  // Catchlights
   ctx.fillStyle = "#f4f6fa";
-  ctx.fillRect(30, 69, 3, 3);
-  ctx.fillRect(57, 69, 3, 3);
+  ctx.fillRect(...sp(26, 23, 1, 1));
+  ctx.fillRect(...sp(35, 23, 1, 1));
+
+  // Nose
+  ctx.fillStyle = "#d4a06e";
+  ctx.fillRect(...sp(31, 27, 2, 1));
+
+  // Cheek blush
+  ctx.fillStyle = "#e89580";
+  ctx.fillRect(...sp(26, 28, 2, 1));
+  ctx.fillRect(...sp(36, 28, 2, 1));
+
   // Mouth + smile dimples
   ctx.fillStyle = "#2a1d1d";
-  // Source mouth (30,29) 4×1 → portrait (42, 87), 12×3
-  ctx.fillRect(42, 87, 12, 3);
-  // Smile dimple pixels
-  ctx.fillRect(39, 90, 3, 3);
-  ctx.fillRect(54, 90, 3, 3);
-
-  // Hair + hat on top of the face overlay, so fringe naturally occludes.
-  for (const slot of ["hair", "hat"] as LayerSlot[]) {
-    const texKey = textureKeyForSlot(a, slot);
-    if (!texKey || !scene.textures.exists(texKey)) continue;
-    const src = scene.textures.get(texKey).getSourceImage() as
-      | HTMLImageElement
-      | HTMLCanvasElement;
-    if (!src || !("width" in src) || !src.width) continue;
-    try {
-      ctx.drawImage(
-        src,
-        sx,
-        sy,
-        SOURCE_CROP,
-        SOURCE_CROP,
-        0,
-        0,
-        PORTRAIT_SIZE,
-        PORTRAIT_SIZE,
-      );
-    } catch {
-      // Sheet may not have loaded yet; skip silently
-    }
-  }
+  ctx.fillRect(...sp(30, 29, 4, 1));
+  ctx.fillRect(...sp(29, 30, 1, 1));
+  ctx.fillRect(...sp(34, 30, 1, 1));
 
   canvas.refresh();
   return key;

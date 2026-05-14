@@ -14,7 +14,10 @@ import {
 import type { Appearance, Direction, LayerSlot } from "../types";
 import { buildFaceOverlay, FACE_FRAME, FACE_TEX_KEY } from "./FaceFactory";
 
-const FACE_DEPTH = 3.5; // between shirt (3) and hair (4) so hair fringe occludes
+// Face sits ABOVE hair and hat. Heavy-fringe hair (bob, long hair) otherwise
+// completely hides the face overlay; cartoon expression is more important
+// here than realistic occlusion, so the face wins.
+const FACE_DEPTH = 6;
 
 export interface LPCAssetSpec {
   key: string;
