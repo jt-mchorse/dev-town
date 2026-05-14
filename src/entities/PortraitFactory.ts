@@ -98,17 +98,25 @@ export function buildPortrait(scene: Phaser.Scene, a: Appearance): string {
   }
 
   // Big-eye face overlay: paint cartoony eyes + mouth at portrait scale so
-  // the dialog face matches what's drawn in-world. Portrait is 96×96 covering
+  // the dialog face matches the in-world overlay. Portrait is 96×96 covering
   // the top 32×32 of the LPC frame at 3×, so 1 source-px = 3 portrait-px.
-  // Eyes sit at source (27,23) and (35,23); mouth at source (31,29).
+  // Source-space eye coords match FaceFactory: (26,23) and (35,23), 3×3 each.
   ctx.fillStyle = "#1a1d24";
-  // Left eye: source (27,23) 2×2 → portrait ((27-16)*3, 23*3) = (33, 69), 6×6
-  ctx.fillRect(33, 69, 6, 6);
-  // Right eye: source (35,23) 2×2 → portrait (57, 69), 6×6
-  ctx.fillRect(57, 69, 6, 6);
-  // Mouth: source (31,29) 3×1 → portrait (45, 87), 9×3
+  // Left eye: source (26,23) 3×3 → portrait ((26-16)*3, 23*3) = (30, 69), 9×9
+  ctx.fillRect(30, 69, 9, 9);
+  // Right eye: source (35,23) 3×3 → portrait (57, 69), 9×9
+  ctx.fillRect(57, 69, 9, 9);
+  // Eye catchlights (upper-left 1-px in source → 3-px in portrait)
+  ctx.fillStyle = "#f4f6fa";
+  ctx.fillRect(30, 69, 3, 3);
+  ctx.fillRect(57, 69, 3, 3);
+  // Mouth + smile dimples
   ctx.fillStyle = "#2a1d1d";
-  ctx.fillRect(45, 87, 9, 3);
+  // Source mouth (30,29) 4×1 → portrait (42, 87), 12×3
+  ctx.fillRect(42, 87, 12, 3);
+  // Smile dimple pixels
+  ctx.fillRect(39, 90, 3, 3);
+  ctx.fillRect(54, 90, 3, 3);
 
   // Hair + hat on top of the face overlay, so fringe naturally occludes.
   for (const slot of ["hair", "hat"] as LayerSlot[]) {
