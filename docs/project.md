@@ -39,15 +39,32 @@ file is the live state.
 
 ## Open work
 
-### Now
-- [ ] **Memory system** (this file + `docs/sessions/` + session-end discipline)
-- [ ] **Chunked commits** of all source so far + push to `origin/main`
+> **Full review with screenshots + structured plan:** see [`docs/review-2026-04-30.md`](review-2026-04-30.md).
 
-### Soon
-- [ ] **Concave-corner auto-tile** — current `paintRectWithAutoTileBorder` only handles convex rectangles. Two adjoining rects show a seam on the inside corner. Not currently visible because no zones place adjacent transition rects.
-- [ ] **Brick-path auto-tile** — use the LPC slate-path 5×5 set so brick path ends/junctions blend into surrounding terrain instead of being clipped at world edges.
-- [ ] **Stone↔dirt transition tile set** — required to give Engineering's stone pavers a softened edge against any non-stone terrain. Atlas may not have this directly; might need procedural blend.
-- [ ] **AI/ML Lab labels** — verify three quiz NPC labels (`Junior Tier / Mid Tier / Staff Tier`) sit cleanly above heads at the new char scale. (Should be fine after the NPC offset fix; needs eyeball confirmation.)
+### Tier 1 — Face system *(critical, user's repeated complaint)*
+
+- [ ] **NPC portrait system.** LPC sprites have ~8-px faces no matter how much we scale them. Real fix is Stardew-style: render a 64×64 or 96×96 portrait of each NPC's appearance (head + shoulders only, 4× zoom) and show it in the dialog box. Cached at NPC construction. ~2–3 hours.
+
+### Tier 2 — Auto-tile / smooth transitions everywhere
+
+- [ ] **Stone↔dirt transition** for Engineering's avenue edges (atlas may lack this directly; procedural may be required).
+- [ ] **Brick-path auto-tile** using the LPC slate-path 5×5 set so path ends and corners blend instead of clipping at world edges.
+- [ ] **Foundation borders** under cottages, farm, building props — currently meet grass at hard rectangles.
+- [ ] **Full water shoreline** in Fishing Dock — currently only top-edge shore tiles are applied.
+- [ ] **Concave-corner auto-tile** for when two auto-tile rects abut.
+
+### Tier 3 — Environment density / per-NPC variety
+
+- [ ] **AI/ML Lab**: a second row of monitors; wider, more visible carpet runway; a whiteboard sprite.
+- [ ] **Dungeon**: bigger crate piles, more rubble, cobweb sprites at corners, darker stone floor.
+- [ ] **Engineering**: alternating building textures, street-lamp sprites between buildings.
+- [ ] Per-NPC portrait variety comes free once Tier 1 ships.
+
+### Tier 4 — Later
+
+- [ ] NPC idle behaviour beyond bobbing (waves, look-around).
+- [ ] Day/night lighting overlay.
+- [ ] Animated bobber in the Fishing Dock as a world sprite (so it can sit on the water instead of being a HUD label).
 
 ### Later
 - [ ] Sound effects + ambient music (no audio assets bundled yet)
