@@ -5,12 +5,16 @@ import { SaveManager } from "../systems/SaveManager";
 import type { DialogRequest, ToastRequest } from "../types";
 
 const BOX_PAD = 6;
-const BOX_HEIGHT = 64;
+const BOX_HEIGHT = 80;
 const BOX_MARGIN = 8;
+const PORTRAIT_SIZE = 64;
+const PORTRAIT_GUTTER = 6;
 
 export class UIScene extends Phaser.Scene {
   private boxBg!: Phaser.GameObjects.Rectangle;
   private boxBorder!: Phaser.GameObjects.Rectangle;
+  private portrait!: Phaser.GameObjects.Image;
+  private portraitFrame!: Phaser.GameObjects.Rectangle;
   private speakerText!: Phaser.GameObjects.Text;
   private bodyText!: Phaser.GameObjects.Text;
   private hintText!: Phaser.GameObjects.Text;
@@ -29,15 +33,17 @@ export class UIScene extends Phaser.Scene {
     const w = GAME_CONFIG.viewWidth;
     const h = GAME_CONFIG.viewHeight;
 
+    const boxY = h - BOX_HEIGHT - BOX_MARGIN;
+
     this.boxBorder = this.add
-      .rectangle(BOX_MARGIN, h - BOX_HEIGHT - BOX_MARGIN, w - BOX_MARGIN * 2, BOX_HEIGHT, 0xe6e8ee)
+      .rectangle(BOX_MARGIN, boxY, w - BOX_MARGIN * 2, BOX_HEIGHT, 0xe6e8ee)
       .setOrigin(0, 0)
       .setDepth(Z.HUD)
       .setScrollFactor(0);
     this.boxBg = this.add
       .rectangle(
         BOX_MARGIN + 1,
-        h - BOX_HEIGHT - BOX_MARGIN + 1,
+        boxY + 1,
         w - BOX_MARGIN * 2 - 2,
         BOX_HEIGHT - 2,
         0x10141c,
@@ -46,8 +52,30 @@ export class UIScene extends Phaser.Scene {
       .setDepth(Z.HUD + 1)
       .setScrollFactor(0);
 
+    // Portrait slot — sits on the left of the box. Frame is the inset
+    // rectangle, portrait is the LPC head-and-shoulders rendered by
+    // PortraitFactory.
+    const portraitX = BOX_MARGIN + BOX_PAD;
+    const portraitY = boxY + (BOX_HEIGHT - PORTRAIT_SIZE) / 2;
+    this.portraitFrame = this.add
+      .rectangle(portraitX, portraitY, PORTRAIT_SIZE, PORTRAIT_SIZE, 0x10141c)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x2a3142)
+      .setDepth(Z.HUD + 2)
+      .setScrollFactor(0)
+      .setVisible(false);
+    this.portrait = this.add
+      .image(portraitX, portraitY, "")
+      .setOrigin(0, 0)
+      .setDisplaySize(PORTRAIT_SIZE, PORTRAIT_SIZE)
+      .setDepth(Z.HUD + 3)
+      .setScrollFactor(0)
+      .setVisible(false);
+
+    // Speaker/body text positions are recomputed each render based on
+    // whether the dialog currently has a portrait.
     this.speakerText = this.add
-      .text(BOX_MARGIN + BOX_PAD, h - BOX_HEIGHT - BOX_MARGIN + BOX_PAD, "", {
+      .text(0, 0, "", {
         fontFamily: "monospace",
         fontSize: "10px",
         color: "#9ad7ff",
@@ -56,11 +84,10 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.bodyText = this.add
-      .text(BOX_MARGIN + BOX_PAD, h - BOX_HEIGHT - BOX_MARGIN + BOX_PAD + 12, "", {
+      .text(0, 0, "", {
         fontFamily: "monospace",
         fontSize: "10px",
         color: "#e6e8ee",
-        wordWrap: { width: w - BOX_MARGIN * 2 - BOX_PAD * 2 },
       })
       .setDepth(Z.HUDFront)
       .setScrollFactor(0);
@@ -134,11 +161,38 @@ export class UIScene extends Phaser.Scene {
     this.speakerText.setVisible(v);
     this.bodyText.setVisible(v);
     this.hintText.setVisible(v);
+    if (!v) {
+      this.portrait.setVisible(false);
+      this.portraitFrame.setVisible(false);
+    }
+  }
+
+  private positionTextForPortrait(hasPortrait: boolean): void {
+    const w = GAME_CONFIG.viewWidth;
+    const h = GAME_CONFIG.viewHeight;
+    const boxY = h - BOX_HEIGHT - BOX_MARGIN;
+    const textX =
+      BOX_MARGIN + BOX_PAD + (hasPortrait ? PORTRAIT_SIZE + PORTRAIT_GUTTER : 0);
+    const textWrapW = w - BOX_MARGIN * 2 - BOX_PAD * 2 - (hasPortrait ? PORTRAIT_SIZE + PORTRAIT_GUTTER : 0);
+    this.speakerText.setPosition(textX, boxY + BOX_PAD);
+    this.bodyText.setPosition(textX, boxY + BOX_PAD + 12);
+    this.bodyText.setWordWrapWidth(textWrapW);
   }
 
   private onShow(req: DialogRequest): void {
     this.current = req;
     this.cursor = 0;
+    const hasPortrait = Boolean(req.portrait && this.textures.exists(req.portrait));
+    this.positionTextForPortrait(hasPortrait);
+    if (hasPortrait) {
+      this.portrait.setTexture(req.portrait!);
+      this.portrait.setDisplaySize(PORTRAIT_SIZE, PORTRAIT_SIZE);
+      this.portrait.setVisible(true);
+      this.portraitFrame.setVisible(true);
+    } else {
+      this.portrait.setVisible(false);
+      this.portraitFrame.setVisible(false);
+    }
     this.render();
     this.setBoxVisible(true);
   }

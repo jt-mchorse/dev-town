@@ -157,11 +157,10 @@ export class TownScene extends BaseZoneScene {
       x: cx - TILE * 4,
       y: cy + TILE,
       facing: "right",
-      onInteract: () =>
-        this.openDialog([
-          { speaker: "Greeter", text: "First time? Walk west — the Engineering District has the work history." },
-          { speaker: "Greeter", text: "Hit the dock if you need quick credits. Fish bite better at dawn. (Dawn is mocked.)" },
-        ]),
+      dialog: [
+        { speaker: "Greeter", text: "First time? Walk west — the Engineering District has the work history." },
+        { speaker: "Greeter", text: "Hit the dock if you need quick credits. Fish bite better at dawn. (Dawn is mocked.)" },
+      ],
     });
 
     // shopkeeper NPC opens shop overlay

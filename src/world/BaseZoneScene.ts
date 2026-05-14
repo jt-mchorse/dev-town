@@ -350,11 +350,21 @@ export abstract class BaseZoneScene extends Phaser.Scene {
   protected addNPC(spec: NPCSpec): NPC {
     const npc = new NPC(this, spec);
     this.npcs.push(npc);
+    // If a static `dialog` is provided, auto-wire interact to speak through
+    // the NPC's portrait. Otherwise the spec must provide an `onInteract`.
+    let onInteract = spec.onInteract;
+    if (!onInteract && spec.dialog) {
+      const lines = spec.dialog;
+      onInteract = () => this.speakAs(npc, lines);
+    }
+    if (!onInteract) {
+      throw new Error(`NPC ${spec.id} needs either onInteract or dialog`);
+    }
     this.interactables.push({
       x: spec.x,
       y: spec.y,
       range: npc.interactRange,
-      onInteract: spec.onInteract,
+      onInteract,
       ref: npc,
     });
     return npc;
@@ -524,14 +534,27 @@ export abstract class BaseZoneScene extends Phaser.Scene {
     this.warps.push(spec);
   }
 
-  protected openDialog(linesArr: DialogLine[], onClose?: () => void): void {
+  protected openDialog(
+    linesArr: DialogLine[],
+    onClose?: () => void,
+    portrait?: string,
+  ): void {
     if (this.inDialog) return;
     this.inDialog = true;
     this.player.setInputLocked(true);
     DialogManager.show({
       lines: linesArr,
+      portrait,
       onClose: () => onClose?.(),
     });
+  }
+
+  /**
+   * Convenience: open a dialog whose speaker is an NPC. The NPC's pre-built
+   * portrait is used automatically.
+   */
+  protected speakAs(npc: NPC, lines: DialogLine[], onClose?: () => void): void {
+    this.openDialog(lines, onClose, npc.portrait);
   }
 
   protected onDialogClose(): void {

@@ -108,7 +108,7 @@ export class EngineeringDistrictScene extends BaseZoneScene {
         x: npcX,
         y: npcY,
         facing: "down",
-        onInteract: () => this.openDialog(lines),
+        dialog: lines,
       });
     }
 

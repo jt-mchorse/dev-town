@@ -49,6 +49,12 @@ export interface DialogLine {
 export interface DialogRequest {
   lines: DialogLine[];
   onClose?: () => void;
+  /**
+   * Phaser texture key of a 96×96 portrait to render at the left of the
+   * dialog box. Built by `buildPortrait()` for NPCs; absent for signs,
+   * chests, and system messages.
+   */
+  portrait?: string;
 }
 
 export interface ToastRequest {

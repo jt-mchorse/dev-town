@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { Z, GAME_CONFIG } from "../config";
 import { LPCCharacter } from "./LPCCharacter";
-import type { Appearance, Direction } from "../types";
+import { buildPortrait } from "./PortraitFactory";
+import type { Appearance, DialogLine, Direction } from "../types";
 
 // Sprite renders at FRAME * charScale tall with anchor (0.5, 0.85), so the
 // visible top of the head sits at y - height * 0.85. Label goes a few pixels
@@ -15,7 +16,13 @@ export interface NPCSpec {
   x: number;
   y: number;
   facing?: Direction;
-  onInteract: () => void;
+  /**
+   * Custom interact callback. Use for NPCs that launch modal mini-games
+   * (shopkeeper, quiz tier, etc). For NPCs that just say something static,
+   * use `dialog` instead and `addNPC` will auto-wire `speakAs(npc, lines)`.
+   */
+  onInteract?: () => void;
+  dialog?: DialogLine[];
   label?: string;
   interactRange?: number;
 }
@@ -23,15 +30,15 @@ export interface NPCSpec {
 export class NPC {
   readonly character: LPCCharacter;
   readonly id: string;
-  readonly onInteract: () => void;
   readonly interactRange: number;
+  readonly portrait: string;
   private labelText: Phaser.GameObjects.Text | null = null;
   private hint: Phaser.GameObjects.Text | null = null;
 
   constructor(scene: Phaser.Scene, spec: NPCSpec) {
     this.id = spec.id;
-    this.onInteract = spec.onInteract;
     this.interactRange = spec.interactRange ?? 28;
+    this.portrait = buildPortrait(scene, spec.appearance);
     this.character = new LPCCharacter(scene, spec.x, spec.y, spec.appearance, {
       withPhysics: true,
       depth: Z.Entities,
