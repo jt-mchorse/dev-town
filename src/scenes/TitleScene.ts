@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { GAME_CONFIG, SCENES, Z } from "../config";
 import { LPCCharacter, registerWalkAnims } from "../entities/LPCCharacter";
 import { SaveManager } from "../systems/SaveManager";
+import { IntroUIScene } from "./IntroUIScene";
 
 export class TitleScene extends Phaser.Scene {
   private demoChars: LPCCharacter[] = [];
@@ -136,6 +137,17 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private start(): void {
+    // First-launch onboarding: show the intro overlay before falling through
+    // to the rest of the boot flow. The intro flips its own save flag on
+    // dismiss, so the second start() call sails past this branch.
+    if (IntroUIScene.shouldShow()) {
+      this.scene.launch(SCENES.IntroUI);
+      this.scene.get(SCENES.IntroUI).events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.start();
+      });
+      return;
+    }
+
     const save = SaveManager.load();
     this.cameras.main.fadeOut(280, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () => {

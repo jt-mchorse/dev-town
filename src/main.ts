@@ -17,6 +17,7 @@ import { TypingUIScene } from "./scenes/TypingUIScene";
 import { DebugUIScene } from "./scenes/DebugUIScene";
 import { SettingsUIScene } from "./scenes/SettingsUIScene";
 import { TrinketsUIScene } from "./scenes/TrinketsUIScene";
+import { IntroUIScene } from "./scenes/IntroUIScene";
 import { UIScene } from "./scenes/UIScene";
 
 const game = new Phaser.Game({
@@ -58,6 +59,7 @@ const game = new Phaser.Game({
     DebugUIScene,
     SettingsUIScene,
     TrinketsUIScene,
+    IntroUIScene,
     UIScene,
   ],
 });
