@@ -37,34 +37,30 @@ file is the live state.
 - [x] Skill Grove: bushes removed from in-clearing scatter, flowers restored to 8×8 procedural icons
 - [x] Modal-UI hint text uses ASCII (`W/S A/D`) — `↑↓←→` were rendering as glyph soup at 9-px font
 
+## Polish tiers (shipped 2026-04-30)
+
+> Full review + plan that spawned these: [`docs/review-2026-04-30.md`](review-2026-04-30.md).
+
+- [x] **Tier 1 — Portrait system.** Per-NPC 96×96 head-and-shoulders portraits composed from each character's LPC layers, cached on the scene texture manager, slotted into the left of the dialog box. Faces are readable.
+- [x] **Tier 2 — Foundations + dungeon floor.** Engineering buildings now sit on auto-tile dirt foundations (matches Town cottages + farm). New procedural dungeon-flagstone floor replaced the `tex_wall` placeholder. *(Deferred: concave-corner auto-tile — no zone currently places adjacent transition rects, so the bug isn't visible.)*
+- [x] **Tier 3 — Density + per-zone variety.** AI/ML Lab carpet widened, 12 server racks across the back wall instead of 8, whiteboard sprites, on-screen monitor row, side-wall crates. Dungeon: crate clusters of three at each corridor mouth, eight cobwebs (one per corner), scattered rubble. Engineering: alternating brown- and slate-roof buildings, street lamps between them.
+- [x] **Tier 4 — Polish.** NPCs glance left/right every 6–14 s and snap back. Animated bobbing bobbers on the Fishing Dock pond (cast spot + three ambient drifters).
+
 ## Open work
 
-> **Full review with screenshots + structured plan:** see [`docs/review-2026-04-30.md`](review-2026-04-30.md).
+### Soon
 
-### Tier 1 — Face system *(critical, user's repeated complaint)*
+- [ ] **Concave-corner auto-tile** — for when zone foundations or transition rects share a side. Not currently visible because no zone places adjacent auto-tile rects, but easy trap to fall into the next time we add one.
+- [ ] **Brick-path auto-tile** using the LPC slate-path 5×5 set so brick path ends blend into surrounding terrain instead of clipping at world edges.
+- [ ] **Stone↔sand transition tiles** to smooth Engineering's sand-shoulder edges against the surrounding stone pavers.
 
-- [ ] **NPC portrait system.** LPC sprites have ~8-px faces no matter how much we scale them. Real fix is Stardew-style: render a 64×64 or 96×96 portrait of each NPC's appearance (head + shoulders only, 4× zoom) and show it in the dialog box. Cached at NPC construction. ~2–3 hours.
+### Later
 
-### Tier 2 — Auto-tile / smooth transitions everywhere
-
-- [ ] **Stone↔dirt transition** for Engineering's avenue edges (atlas may lack this directly; procedural may be required).
-- [ ] **Brick-path auto-tile** using the LPC slate-path 5×5 set so path ends and corners blend instead of clipping at world edges.
-- [ ] **Foundation borders** under cottages, farm, building props — currently meet grass at hard rectangles.
-- [ ] **Full water shoreline** in Fishing Dock — currently only top-edge shore tiles are applied.
-- [ ] **Concave-corner auto-tile** for when two auto-tile rects abut.
-
-### Tier 3 — Environment density / per-NPC variety
-
-- [ ] **AI/ML Lab**: a second row of monitors; wider, more visible carpet runway; a whiteboard sprite.
-- [ ] **Dungeon**: bigger crate piles, more rubble, cobweb sprites at corners, darker stone floor.
-- [ ] **Engineering**: alternating building textures, street-lamp sprites between buildings.
-- [ ] Per-NPC portrait variety comes free once Tier 1 ships.
-
-### Tier 4 — Later
-
-- [ ] NPC idle behaviour beyond bobbing (waves, look-around).
-- [ ] Day/night lighting overlay.
-- [ ] Animated bobber in the Fishing Dock as a world sprite (so it can sit on the water instead of being a HUD label).
+- [ ] Day/night lighting overlay (tinted `Phaser.GameObjects.Layer` driven by `Date.now()`).
+- [ ] Sound effects + ambient music.
+- [ ] Cross-device save sync (would need a tiny backend).
+- [ ] Trinkets / inventory UI surfacing the chest discoveries currently only persisted in `save.openedChests`.
+- [ ] Recruiter-friendly first-launch overlay ("here's what to look at first").
 
 ### Later
 - [ ] Sound effects + ambient music (no audio assets bundled yet)
