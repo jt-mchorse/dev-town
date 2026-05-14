@@ -501,10 +501,14 @@ export class PreloadScene extends Phaser.Scene {
     const grass = 0x4d8442;
     const grassDark = 0x3f6f37;
     const grassLight = 0x5e9750;
-    const brick = 0x9b5a3c;
-    const brickDark = 0x6e3a26;
-    const brickLight = 0xb37155;
-    const mortar = 0x4a3024;
+    // Vivid terracotta-red brick so the path reads clearly against the
+    // grass-dirt auto-tile ring around the plaza (which is warm brown) and
+    // doesn't blend into surrounding dirt/dust decor. Four brick shades cycle
+    // per individual brick so the surface isn't a flat stamp.
+    const brickDark = 0x7e2e1c;
+    const brickLight = 0xe6824a;
+    const brickShades = [0xc25a3a, 0xb04a2a, 0xd4684a, 0xa84426];
+    const mortar = 0x2a1410; // dark espresso, thicker contrast against brick
 
     const STRIP = 10; // px of grass blend on each "out" side
 
@@ -515,33 +519,46 @@ export class PreloadScene extends Phaser.Scene {
       w: number,
       h: number,
     ) => {
-      g.fillStyle(brick, 1).fillRect(x, y, w, h);
-      // running-bond brick pattern: 16-wide × 8-tall bricks, alternating offsets
-      g.fillStyle(mortar, 1);
-      // horizontal mortar lines every 8 px
-      for (let by = 0; by <= h; by += 8) {
-        g.fillRect(x, y + by, w, 1);
-      }
-      // vertical mortar lines, offset every other row
-      for (let by = 0; by < h; by += 8) {
-        const row = Math.floor((y + by) / 8);
-        const offset = (row % 2) * 8;
-        for (let bx = offset; bx <= w; bx += 16) {
-          g.fillRect(x + bx, y + by, 1, 8);
+      // Base fill: solid mortar. Bricks are then "stamped" on top so each
+      // brick can be a slightly different shade (running-bond, hand-laid feel).
+      g.fillStyle(mortar, 1).fillRect(x, y, w, h);
+
+      const BRICK_W = 16;
+      const BRICK_H = 8;
+      const INSET = 1; // mortar gap around each brick
+      // Stamp every brick of the 16×8 running-bond pattern individually.
+      // INSET is applied only on the *interior* sides of each brick — a brick
+      // straddling the tile boundary extends right to the edge so adjacent
+      // tiles butt cleanly together with a single mortar joint, not two.
+      for (let by = 0; by < h; by += BRICK_H) {
+        const row = Math.floor((y + by) / BRICK_H);
+        const offset = (row % 2) * (BRICK_W / 2);
+        for (let bx = -BRICK_W + offset; bx < w; bx += BRICK_W) {
+          const shade = brickShades[(row * 7 + bx) & 3];
+          const spansLeft = bx < 0;
+          const spansRight = bx + BRICK_W > w;
+          const leftInset = spansLeft ? 0 : INSET;
+          const rightInset = spansRight ? 0 : INSET;
+          const rx = Math.max(x + bx + leftInset, x);
+          const ry = y + by + INSET;
+          const rw = Math.min(x + bx + BRICK_W - rightInset, x + w) - rx;
+          const rh = BRICK_H - INSET;
+          if (rw <= 0 || rh <= 0) continue;
+          g.fillStyle(shade, 1).fillRect(rx, ry, rw, rh);
+          g.fillStyle(brickLight, 0.55).fillRect(rx, ry, rw, 1);
+          g.fillStyle(brickDark, 0.55).fillRect(rx, ry + rh - 1, rw, 1);
         }
       }
-      // a few highlight specks for warmth
-      g.fillStyle(brickLight, 0.6);
-      for (let i = 0; i < 4; i += 1) {
-        const sx = x + ((i * 11) % w);
-        const sy = y + ((i * 7) % h);
-        g.fillRect(sx, sy, 1, 1);
+
+      // Subtle weathering: a handful of dark and light flecks scattered
+      // deterministically across the tile.
+      g.fillStyle(brickDark, 0.4);
+      for (let i = 0; i < 6; i += 1) {
+        g.fillRect(x + ((i * 11 + 3) % w), y + ((i * 17 + 5) % h), 1, 1);
       }
-      g.fillStyle(brickDark, 0.5);
-      for (let i = 0; i < 3; i += 1) {
-        const sx = x + ((i * 17) % w);
-        const sy = y + ((i * 13) % h);
-        g.fillRect(sx, sy, 1, 1);
+      g.fillStyle(brickLight, 0.4);
+      for (let i = 0; i < 6; i += 1) {
+        g.fillRect(x + ((i * 13 + 7) % w), y + ((i * 23 + 11) % h), 1, 1);
       }
     };
 
@@ -564,6 +581,51 @@ export class PreloadScene extends Phaser.Scene {
       }
     };
 
+    // Organic intrusion: scatter a few dark-grass tufts 2 px deep into the
+    // brick along the grass boundary, plus a couple of brick specks jutting
+    // up into the grass. Breaks the otherwise ruler-clean STRIP edge so the
+    // path looks worn rather than fresh-painted.
+    const intrudeNorth = (g: Phaser.GameObjects.Graphics) => {
+      g.fillStyle(grassDark, 1);
+      for (const [px, off] of [[3, 1], [9, 2], [15, 0], [21, 1], [27, 2]]) {
+        g.fillRect(px, STRIP + off, 1, 1);
+      }
+      g.fillStyle(brickShades[1], 1);
+      for (const [px, off] of [[6, 1], [18, 2]]) {
+        g.fillRect(px, STRIP - 1 - off, 1, 1);
+      }
+    };
+    const intrudeSouth = (g: Phaser.GameObjects.Graphics) => {
+      g.fillStyle(grassDark, 1);
+      for (const [px, off] of [[4, 1], [10, 2], [16, 0], [22, 1], [28, 2]]) {
+        g.fillRect(px, size - STRIP - 1 - off, 1, 1);
+      }
+      g.fillStyle(brickShades[1], 1);
+      for (const [px, off] of [[7, 1], [19, 2]]) {
+        g.fillRect(px, size - STRIP + off, 1, 1);
+      }
+    };
+    const intrudeWest = (g: Phaser.GameObjects.Graphics) => {
+      g.fillStyle(grassDark, 1);
+      for (const [py, off] of [[5, 1], [11, 2], [17, 0], [23, 1], [29, 2]]) {
+        g.fillRect(STRIP + off, py, 1, 1);
+      }
+      g.fillStyle(brickShades[1], 1);
+      for (const [py, off] of [[8, 1], [20, 2]]) {
+        g.fillRect(STRIP - 1 - off, py, 1, 1);
+      }
+    };
+    const intrudeEast = (g: Phaser.GameObjects.Graphics) => {
+      g.fillStyle(grassDark, 1);
+      for (const [py, off] of [[6, 1], [12, 2], [18, 0], [24, 1], [30, 2]]) {
+        g.fillRect(size - STRIP - 1 - off, py, 1, 1);
+      }
+      g.fillStyle(brickShades[1], 1);
+      for (const [py, off] of [[9, 1], [21, 2]]) {
+        g.fillRect(size - STRIP + off, py, 1, 1);
+      }
+    };
+
     const paintTile = (
       key: string,
       out: { n?: boolean; s?: boolean; e?: boolean; w?: boolean },
@@ -571,22 +633,27 @@ export class PreloadScene extends Phaser.Scene {
       const g = this.add.graphics();
       // Base = brick fill
       paintBrick(g, 0, 0, size, size);
-      // Overlay grass on every "out" side
+      // Overlay grass on every "out" side, then intrude organic specks across
+      // the boundary so the join doesn't look like a ruler edge.
       if (out.n) {
         paintGrass(g, 0, 0, size, STRIP);
-        g.fillStyle(grassDark, 0.55).fillRect(0, STRIP, size, 2);
+        g.fillStyle(grassDark, 0.55).fillRect(0, STRIP, size, 1);
+        intrudeNorth(g);
       }
       if (out.s) {
         paintGrass(g, 0, size - STRIP, size, STRIP);
-        g.fillStyle(grassDark, 0.55).fillRect(0, size - STRIP - 2, size, 2);
+        g.fillStyle(grassDark, 0.55).fillRect(0, size - STRIP - 1, size, 1);
+        intrudeSouth(g);
       }
       if (out.w) {
         paintGrass(g, 0, 0, STRIP, size);
-        g.fillStyle(grassDark, 0.55).fillRect(STRIP, 0, 2, size);
+        g.fillStyle(grassDark, 0.55).fillRect(STRIP, 0, 1, size);
+        intrudeWest(g);
       }
       if (out.e) {
         paintGrass(g, size - STRIP, 0, STRIP, size);
-        g.fillStyle(grassDark, 0.55).fillRect(size - STRIP - 2, 0, 2, size);
+        g.fillStyle(grassDark, 0.55).fillRect(size - STRIP - 1, 0, 1, size);
+        intrudeEast(g);
       }
       g.generateTexture(key, size, size);
       g.destroy();
