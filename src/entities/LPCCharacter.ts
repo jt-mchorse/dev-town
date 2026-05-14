@@ -12,6 +12,9 @@ import {
   SHEET_COLS,
 } from "../data/lpc";
 import type { Appearance, Direction, LayerSlot } from "../types";
+import { buildFaceOverlay, FACE_FRAME, FACE_TEX_KEY } from "./FaceFactory";
+
+const FACE_DEPTH = 3.5; // between shirt (3) and hair (4) so hair fringe occludes
 
 export interface LPCAssetSpec {
   key: string;
@@ -62,6 +65,7 @@ const LAYER_ORDER: LayerSlot[] = ["body", "shoes", "pants", "shirt", "hair", "ha
 export class LPCCharacter {
   readonly container: Phaser.GameObjects.Container;
   private layers = new Map<LayerSlot, Phaser.GameObjects.Sprite>();
+  private faceSprite: Phaser.GameObjects.Sprite | null = null;
   private appearance: Appearance;
   private direction: Direction = "down";
   private animating = false;
@@ -87,7 +91,21 @@ export class LPCCharacter {
     }
 
     for (const slot of LAYER_ORDER) this.rebuildLayer(slot);
+    this.buildFaceSprite();
     this.faceDirection("down");
+  }
+
+  private buildFaceSprite(): void {
+    // Ensure the global overlay sheet exists; safe to call repeatedly.
+    buildFaceOverlay(this.scene);
+    if (!this.scene.textures.exists(FACE_TEX_KEY)) return;
+    const sprite = this.scene.add.sprite(0, 0, FACE_TEX_KEY, FACE_FRAME.down);
+    sprite.setOrigin(0.5, 0.85);
+    sprite.setDisplaySize(FRAME * GAME_CONFIG.charScale, FRAME * GAME_CONFIG.charScale);
+    sprite.setDepth(FACE_DEPTH);
+    this.container.add(sprite);
+    this.container.sort("depth");
+    this.faceSprite = sprite;
   }
 
   get x(): number {
@@ -147,6 +165,7 @@ export class LPCCharacter {
       if (this.scene.anims.exists(anim)) sprite.play(anim, true);
       void slot;
     });
+    this.syncFaceDirection();
   }
 
   stopWalking(): void {
@@ -166,12 +185,20 @@ export class LPCCharacter {
       sprite.stop();
       if (sprite.texture.key) sprite.setFrame(frame);
     });
+    this.syncFaceDirection();
   }
 
   destroy(): void {
     this.layers.forEach((s) => s.destroy());
     this.layers.clear();
+    this.faceSprite?.destroy();
+    this.faceSprite = null;
     this.container.destroy();
+  }
+
+  private syncFaceDirection(): void {
+    if (!this.faceSprite) return;
+    this.faceSprite.setFrame(FACE_FRAME[this.direction]);
   }
 
   private lastDir: Direction | null = null;

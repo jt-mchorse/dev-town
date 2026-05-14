@@ -73,6 +73,45 @@ export function buildPortrait(scene: Phaser.Scene, a: Appearance): string {
   const sy = row * FRAME_SIZE;
 
   for (const slot of LAYER_ORDER) {
+    if (slot === "hair" || slot === "hat") continue; // drawn last, after face
+    const texKey = textureKeyForSlot(a, slot);
+    if (!texKey || !scene.textures.exists(texKey)) continue;
+    const src = scene.textures.get(texKey).getSourceImage() as
+      | HTMLImageElement
+      | HTMLCanvasElement;
+    if (!src || !("width" in src) || !src.width) continue;
+    try {
+      ctx.drawImage(
+        src,
+        sx,
+        sy,
+        SOURCE_CROP,
+        SOURCE_CROP,
+        0,
+        0,
+        PORTRAIT_SIZE,
+        PORTRAIT_SIZE,
+      );
+    } catch {
+      // Sheet may not have loaded yet; skip silently
+    }
+  }
+
+  // Big-eye face overlay: paint cartoony eyes + mouth at portrait scale so
+  // the dialog face matches what's drawn in-world. Portrait is 96×96 covering
+  // the top 32×32 of the LPC frame at 3×, so 1 source-px = 3 portrait-px.
+  // Eyes sit at source (27,23) and (35,23); mouth at source (31,29).
+  ctx.fillStyle = "#1a1d24";
+  // Left eye: source (27,23) 2×2 → portrait ((27-16)*3, 23*3) = (33, 69), 6×6
+  ctx.fillRect(33, 69, 6, 6);
+  // Right eye: source (35,23) 2×2 → portrait (57, 69), 6×6
+  ctx.fillRect(57, 69, 6, 6);
+  // Mouth: source (31,29) 3×1 → portrait (45, 87), 9×3
+  ctx.fillStyle = "#2a1d1d";
+  ctx.fillRect(45, 87, 9, 3);
+
+  // Hair + hat on top of the face overlay, so fringe naturally occludes.
+  for (const slot of ["hair", "hat"] as LayerSlot[]) {
     const texKey = textureKeyForSlot(a, slot);
     if (!texKey || !scene.textures.exists(texKey)) continue;
     const src = scene.textures.get(texKey).getSourceImage() as
