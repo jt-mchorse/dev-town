@@ -213,6 +213,7 @@ export class PreloadScene extends Phaser.Scene {
     this.makeTile(TEX.Wall, 0x4a5060, 0x2c2f36, 0x5e6477);
     this.makeTile(TEX.Stone, 0x6e6f78, 0x55565e, 0x83848e);
     this.makeDungeonFloor(TEX.DungeonFloor);
+    this.makeStoneDirtAutoTile();
     this.makeTile(TEX.Dock, 0x7a5638, 0x593e26, 0x8e6645);
     this.makeTile(TEX.GrassDark, 0x2c5530, 0x224427, 0x3a6a3a);
     this.makeTile(TEX.GrassLight, 0x4d8442, 0x3f6f37, 0x5e9750);
@@ -374,6 +375,83 @@ export class PreloadScene extends Phaser.Scene {
     g.lineStyle(1, 0x000000, 0.6).strokeRect(0, 0, 28, 44);
     g.generateTexture(key, 28, 44);
     g.destroy();
+  }
+
+  /**
+   * Procedurally generate a 3×3 stone→dirt auto-tile set so we have a
+   * smooth gradient between Engineering's stone pavement and the dirt
+   * avenue running through it. Atlas only ships grass↔dirt; this gives
+   * us the second terrain pair we need.
+   *
+   * Naming follows the same NW/N/NE/W/C/E/SW/S/SE convention as
+   * `GRASS_DIRT_AUTOTILE` in BaseZoneScene.
+   */
+  private makeStoneDirtAutoTile(): void {
+    const size = GAME_CONFIG.tileSize; // 32
+    const stone = 0x6e6f78; // outer terrain (cool gray)
+    const stoneDark = 0x55565e;
+    const stoneLight = 0x83848e;
+    const dirt = 0x7a5638; // inner terrain (warm brown)
+    const dirtDark = 0x5b3e26;
+    const dirtLight = 0x8e6645;
+
+    const dither = (g: Phaser.GameObjects.Graphics, color: number, seed: number) => {
+      g.fillStyle(color, 1);
+      // Scatter a few specks across the tile so it doesn't look like a flat
+      // colour pour. Seeded by tile-position so reload-stable.
+      for (let i = 0; i < 6; i += 1) {
+        const x = (seed * 7 + i * 11) % size;
+        const y = (seed * 13 + i * 17) % size;
+        g.fillRect(x, y, 1, 1);
+      }
+    };
+
+    const paintCorner = (
+      key: string,
+      outerSides: { n?: boolean; e?: boolean; s?: boolean; w?: boolean },
+    ) => {
+      const g = this.add.graphics();
+      // base = inner terrain (dirt)
+      g.fillStyle(dirt, 1).fillRect(0, 0, size, size);
+      dither(g, dirtDark, 1);
+      dither(g, dirtLight, 3);
+      // overlay the outer terrain (stone) on the requested sides
+      const STRIP = 12; // px of stone visible on each outer edge
+      if (outerSides.n) {
+        g.fillStyle(stone, 1).fillRect(0, 0, size, STRIP);
+        // soft fringe so the boundary doesn't look like a hard cut
+        g.fillStyle(stoneDark, 0.65).fillRect(0, STRIP, size, 2);
+      }
+      if (outerSides.s) {
+        g.fillStyle(stone, 1).fillRect(0, size - STRIP, size, STRIP);
+        g.fillStyle(stoneDark, 0.65).fillRect(0, size - STRIP - 2, size, 2);
+      }
+      if (outerSides.w) {
+        g.fillStyle(stone, 1).fillRect(0, 0, STRIP, size);
+        g.fillStyle(stoneDark, 0.65).fillRect(STRIP, 0, 2, size);
+      }
+      if (outerSides.e) {
+        g.fillStyle(stone, 1).fillRect(size - STRIP, 0, STRIP, size);
+        g.fillStyle(stoneDark, 0.65).fillRect(size - STRIP - 2, 0, 2, size);
+      }
+      // ambient texture on the stone
+      if (outerSides.n || outerSides.s || outerSides.w || outerSides.e) {
+        dither(g, stoneDark, 5);
+        dither(g, stoneLight, 7);
+      }
+      g.generateTexture(key, size, size);
+      g.destroy();
+    };
+
+    paintCorner("tex_sd_nw", { n: true, w: true });
+    paintCorner("tex_sd_n", { n: true });
+    paintCorner("tex_sd_ne", { n: true, e: true });
+    paintCorner("tex_sd_w", { w: true });
+    paintCorner("tex_sd_c", {}); // pure dirt interior
+    paintCorner("tex_sd_e", { e: true });
+    paintCorner("tex_sd_sw", { s: true, w: true });
+    paintCorner("tex_sd_s", { s: true });
+    paintCorner("tex_sd_se", { s: true, e: true });
   }
 
   /**

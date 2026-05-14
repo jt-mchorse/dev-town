@@ -49,13 +49,22 @@ export class EngineeringDistrictScene extends BaseZoneScene {
     this.paintWholeFloor(worldW, worldH, TEX.Stone);
 
     // wide central avenue of path tiles
-    // central avenue: dirt path with sand shoulders on each side so the
-    // stone pavement, sand, and dirt blend smoothly instead of stone-to-dirt
-    // hard cuts.
+    // Central avenue: dirt path through the stone district, blended at the
+    // top and bottom with the new stone↔dirt auto-tile so the avenue grows
+    // out of the pavement instead of meeting it at a hard line.
     const cy = Math.floor(GAME_CONFIG.worldTilesY / 2) * TILE;
-    this.paintGround(new Phaser.Geom.Rectangle(0, cy - TILE, worldW, TILE), TEX.Sand);
-    this.paintGround(new Phaser.Geom.Rectangle(0, cy, worldW, TILE), TEX.Path);
-    this.paintGround(new Phaser.Geom.Rectangle(0, cy + TILE, worldW, TILE), TEX.Sand);
+    this.paintGround(
+      new Phaser.Geom.Rectangle(0, cy - TILE, worldW, TILE),
+      this.STONE_DIRT_AUTOTILE.n,
+    );
+    this.paintGround(
+      new Phaser.Geom.Rectangle(0, cy, worldW, TILE),
+      this.STONE_DIRT_AUTOTILE.c,
+    );
+    this.paintGround(
+      new Phaser.Geom.Rectangle(0, cy + TILE, worldW, TILE),
+      this.STONE_DIRT_AUTOTILE.s,
+    );
 
     const cyTile = Math.floor(GAME_CONFIG.worldTilesY / 2);
     this.addBorderWalls(worldW, worldH, [

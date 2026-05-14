@@ -268,6 +268,12 @@ export abstract class BaseZoneScene extends Phaser.Scene {
     sw: "tex_gd_sw", s: "tex_gd_s", se: "tex_gd_se",
   };
 
+  protected readonly STONE_DIRT_AUTOTILE = {
+    nw: "tex_sd_nw", n: "tex_sd_n", ne: "tex_sd_ne",
+    w: "tex_sd_w", c: "tex_sd_c", e: "tex_sd_e",
+    sw: "tex_sd_sw", s: "tex_sd_s", se: "tex_sd_se",
+  };
+
   /**
    * Tile-aligned ground painter that draws a base tile and randomly substitutes
    * variant tiles at a given probability per cell. Use this for grass/dirt
