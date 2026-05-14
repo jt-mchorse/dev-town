@@ -49,13 +49,15 @@ file is the live state.
 - [x] **Tier 6 — Day/night tint overlay.** `BaseZoneScene` runs a 5-anchor colour cycle (dawn → day → dusk → night → predawn) over an 8-minute loop, drawn at `Z.Overlay+10`, scroll-locked, refreshed every 200 ms.
 - [x] **Tier 7 — Trinkets UI.** Settings → `[T]` opens a modal listing every static chest. Opened chests show their flavor body + reward; unopened show `◇ undiscovered • hidden in <zone>`. Daily-secret count separated in the header.
 - [x] **Tier 8 — First-launch onboarding.** TitleScene launches `IntroUIScene` the first time a player hits Enter (gated by `save.flags.hasSeenIntro`). The overlay names the project, lists controls, enumerates the six zones, and points at `src/data/portfolio.ts` as the one file to edit for stale content.
+- [x] **Tier 9 — In-world face overlay.** New `FaceFactory` builds a 4-frame procedural face spritesheet (one per direction) with 3×3 cartoony eyes (white catchlight) + smile-curl mouth. `LPCCharacter` paints it as an extra layer at depth 3.5 — between shirt and hair — so hair fringe and hats still occlude naturally. `PortraitFactory` paints the same face at 3× into the dialog portrait so in-world and dialog look match.
+- [x] **Tier 10 — Concave-corner auto-tile.** Stone↔dirt set ships 4 concave variants (`tex_sd_c{nw,ne,sw,se}`) for inner-corner cells where two regions touch diagonally. New `paintRegionAutoTile(cellSet, set)` painter on `BaseZoneScene` selects tiles by inspecting all 8 neighbors per cell.
+- [x] **Tier 11 — Brick-path auto-tile.** Town's brick paths now use a 16-tile procedural set (`tex_bp_*`) with grass-blend edges, strips, end-caps, and an isolated variant. `paintRegionAutoTile` selects per-cell; `membershipMask` lets the brick cross into the plaza without painting grass against stone.
 
 ## Open work
 
 ### Deferred (nice-to-have, not blocking ship)
 
-- [ ] **Concave-corner auto-tile** — for when zone foundations or transition rects share a side. Not currently visible because no zone places adjacent auto-tile rects, but an easy trap to fall into the next time we add one.
-- [ ] **Brick-path auto-tile** using the LPC slate-path 5×5 set so brick path ends blend into surrounding terrain instead of clipping at world edges.
+- [ ] **Grass↔dirt concave variants** — currently only stone↔dirt has them. Grass↔dirt falls back to plain interior at concave junctions (the cells where two grass↔dirt regions touch diagonally). No zone triggers this today.
 - [ ] **Stone↔sand transition tiles** for the Fishing Dock shoreline (the dock currently uses a single sand strip; works visually but isn't a real auto-tile).
 
 ### Later
