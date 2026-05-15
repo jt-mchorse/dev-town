@@ -28,22 +28,25 @@ export const FACE_FRAME: Record<Direction, number> = {
 };
 
 // LPC head anatomy (frame is 64×64, character centered):
-//   y=14..22  hair fringe region (overlay sits behind hair, occluded here)
-//   y=18..30  head skin region (we paint a skin patch here to cover LPC's
-//             tiny native facial pixels and host our larger cartoon features)
-// Vertical layout of features inside that patch:
-//   y=21  eyebrows
-//   y=23..25  eyes (3 rows)
-//   y=27  nose tint
-//   y=28  cheek blush
-//   y=29  mouth
-//   y=30  smile dimples
+//   y=14..23  hair fringe region — kept clear so hair shows on top of head
+//   y=23..33  head skin region — we paint a skin patch here to cover LPC's
+//             tiny native facial pixels and host our larger cartoon features
+//   y=33..36  neck/shoulder area — skin patch ends before this
+// Vertical layout of features inside the skin patch:
+//   y=25      eyebrows
+//   y=27..29  eyes (3 rows)
+//   y=30      nose tint
+//   y=31      cheek blush
+//   y=32      mouth
+//   y=33      smile dimples
 const CENTER_X = 32;
-const BROW_Y = 21;
-const EYE_Y = 23;
-const NOSE_Y = 27;
-const BLUSH_Y = 28;
-const MOUTH_Y = 29;
+const BROW_Y = 25;
+const EYE_Y = 27;
+const NOSE_Y = 30;
+const BLUSH_Y = 31;
+const MOUTH_Y = 32;
+const HEAD_Y = 23;
+const HEAD_H = 11;
 
 // Palette tuned to match the LPC light-skin body sheet so the painted head
 // patch reads as the same character, not a cutout. (We currently only ship
@@ -87,8 +90,8 @@ function paintHeadPatch(
 }
 
 function drawDownFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  // Skin patch (14 wide × 13 tall): hides the LPC face beneath ours.
-  paintHeadPatch(ctx, ox, 25, 18, 14, 13);
+  // Skin patch (14 wide × HEAD_H tall): hides the LPC face beneath ours.
+  paintHeadPatch(ctx, ox, 25, HEAD_Y, 14, HEAD_H);
   // Brows — a touch above the eyes, give the face attitude.
   ctx.fillStyle = BROW_COLOR;
   ctx.fillRect(ox + CENTER_X - 6, BROW_Y, 3, 1);
@@ -113,7 +116,7 @@ function drawDownFace(ctx: CanvasRenderingContext2D, ox: number): void {
 function drawLeftFace(ctx: CanvasRenderingContext2D, ox: number): void {
   // Half-head patch on the visible (left) half. 8 wide so it lands on the
   // LPC face's left side when the body sprite shifts for the left walk row.
-  paintHeadPatch(ctx, ox, 24, 18, 9, 13);
+  paintHeadPatch(ctx, ox, 24, HEAD_Y, 9, HEAD_H);
   // Brow over the visible eye
   ctx.fillStyle = BROW_COLOR;
   ctx.fillRect(ox + CENTER_X - 7, BROW_Y, 3, 1);
@@ -128,7 +131,7 @@ function drawLeftFace(ctx: CanvasRenderingContext2D, ox: number): void {
 }
 
 function drawRightFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  paintHeadPatch(ctx, ox, 31, 18, 9, 13);
+  paintHeadPatch(ctx, ox, 31, HEAD_Y, 9, HEAD_H);
   ctx.fillStyle = BROW_COLOR;
   ctx.fillRect(ox + CENTER_X + 4, BROW_Y, 3, 1);
   drawEye(ctx, ox + CENTER_X + 4, EYE_Y);
@@ -144,15 +147,14 @@ function drawRightFace(ctx: CanvasRenderingContext2D, ox: number): void {
  * the player walks north.
  */
 function drawUpFace(ctx: CanvasRenderingContext2D, ox: number): void {
-  // Two narrow skin slivers at the edges of the head (the ears that peek
-  // around behind the hair). The body sheet already paints the back-of-head
-  // shape; we just reinforce the ear positions.
+  // Two narrow skin slivers at the sides of the head (ears peeking around
+  // behind the hair). Aligned to the new lower head position.
   ctx.fillStyle = SKIN;
-  ctx.fillRect(ox + 25, 22, 1, 3); // left ear
-  ctx.fillRect(ox + 38, 22, 1, 3); // right ear
+  ctx.fillRect(ox + 25, HEAD_Y + 3, 1, 3); // left ear
+  ctx.fillRect(ox + 38, HEAD_Y + 3, 1, 3); // right ear
   ctx.fillStyle = SKIN_SHADE;
-  ctx.fillRect(ox + 25, 24, 1, 1);
-  ctx.fillRect(ox + 38, 24, 1, 1);
+  ctx.fillRect(ox + 25, HEAD_Y + 5, 1, 1);
+  ctx.fillRect(ox + 38, HEAD_Y + 5, 1, 1);
 }
 
 /**

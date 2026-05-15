@@ -43,10 +43,15 @@ export const TEX = {
   Building: "tex_building",
   BuildingAlt: "tex_building_alt",
   Door: "tex_door",
-  // Fences (from fence.png)
+  // Fences (procedurally generated — see makeFenceTiles)
   FenceH: "tex_fence_h",
   FenceV: "tex_fence_v",
   Fence: "tex_fence",
+  // Proper corner pieces so the farm pen reads as an enclosed rectangle.
+  FenceNW: "tex_fence_nw",
+  FenceNE: "tex_fence_ne",
+  FenceSW: "tex_fence_sw",
+  FenceSE: "tex_fence_se",
   // Procedural fallbacks (not in atlas)
   Wall: "tex_wall",
   Stone: "tex_stone",
@@ -203,10 +208,10 @@ export class PreloadScene extends Phaser.Scene {
 
     // (Buildings are procedural — see makeCottage / makeBuildingTex below)
 
-    // Fences (fence.png is 3x6 of 32x32; row 0 = horizontal rail, row 1 = single posts)
-    cutFrom(FARM_FENCE, TEX.FenceH, 1, 0, 1, 1); // horizontal middle piece
-    cutFrom(FARM_FENCE, TEX.FenceV, 0, 1, 1, 1); // single vertical post
-    cutFrom(FARM_FENCE, TEX.Fence, 1, 0, 1, 1);
+    // (Atlas fence pieces unused — we generate the full 7-tile fence set
+    // procedurally in makeFenceTiles below so corners + T-junctions look
+    // right at the farm pen.)
+    void FARM_FENCE;
   }
 
   private makeProcedural(): void {
@@ -246,6 +251,120 @@ export class PreloadScene extends Phaser.Scene {
     this.makeMushroom(TEX.Mushroom);
     this.makeWhiteboard(TEX.Whiteboard);
     this.makeStreetLamp(TEX.StreetLamp);
+    this.makeFenceTiles();
+  }
+
+  /**
+   * Procedural farm-fence set: a single horizontal rail, a single vertical
+   * post, and the four corner pieces (NW/NE/SW/SE) so the farm pen reads as
+   * an enclosed rectangle instead of horizontal rails butting into vertical
+   * rails at the corners.
+   *
+   * Each tile is a 32×32 wooden fence at the bottom-half of the cell (anchor
+   * Y is 0.85 in the world, so the rail visually sits at character knee
+   * height). Top-half is transparent so the fence doesn't occlude the grass.
+   */
+  private makeFenceTiles(): void {
+    const size = GAME_CONFIG.tileSize; // 32
+    const POST_W = 4;
+    const RAIL_H = 3;
+    const RAIL_TOP = 18;       // top rail y
+    const RAIL_BOT = 24;       // bottom rail y
+    const POST_TOP = 16;
+    const POST_BOT = 28;
+    const wood = 0x8a5a30;
+    const woodDark = 0x5a3520;
+    const woodLight = 0xb07c4a;
+
+    const paintPost = (g: Phaser.GameObjects.Graphics, x: number) => {
+      g.fillStyle(wood, 1).fillRect(x, POST_TOP, POST_W, POST_BOT - POST_TOP);
+      // 1-px shadow on the right edge of the post for depth
+      g.fillStyle(woodDark, 1).fillRect(x + POST_W - 1, POST_TOP, 1, POST_BOT - POST_TOP);
+      // 1-px highlight on the left edge
+      g.fillStyle(woodLight, 1).fillRect(x, POST_TOP, 1, POST_BOT - POST_TOP);
+      // Top cap shadow
+      g.fillStyle(woodDark, 1).fillRect(x, POST_TOP, POST_W, 1);
+    };
+
+    const paintHRail = (g: Phaser.GameObjects.Graphics, xStart: number, xEnd: number) => {
+      // Top rail
+      g.fillStyle(wood, 1).fillRect(xStart, RAIL_TOP, xEnd - xStart, RAIL_H);
+      g.fillStyle(woodDark, 1).fillRect(xStart, RAIL_TOP + RAIL_H - 1, xEnd - xStart, 1);
+      g.fillStyle(woodLight, 1).fillRect(xStart, RAIL_TOP, xEnd - xStart, 1);
+      // Bottom rail
+      g.fillStyle(wood, 1).fillRect(xStart, RAIL_BOT, xEnd - xStart, RAIL_H);
+      g.fillStyle(woodDark, 1).fillRect(xStart, RAIL_BOT + RAIL_H - 1, xEnd - xStart, 1);
+      g.fillStyle(woodLight, 1).fillRect(xStart, RAIL_BOT, xEnd - xStart, 1);
+    };
+
+    const paintVRail = (g: Phaser.GameObjects.Graphics, x: number, yStart: number, yEnd: number) => {
+      g.fillStyle(wood, 1).fillRect(x, yStart, RAIL_H, yEnd - yStart);
+      g.fillStyle(woodDark, 1).fillRect(x + RAIL_H - 1, yStart, 1, yEnd - yStart);
+      g.fillStyle(woodLight, 1).fillRect(x, yStart, 1, yEnd - yStart);
+    };
+
+    // Horizontal rail tile — two parallel rails across the full tile width,
+    // no posts (those are introduced at corners and intervals).
+    {
+      const g = this.add.graphics();
+      paintHRail(g, 0, size);
+      g.generateTexture(TEX.FenceH, size, size);
+      g.destroy();
+    }
+    // Vertical rail tile — single thin vertical bar.
+    {
+      const g = this.add.graphics();
+      paintVRail(g, size / 2 - 1, 0, size);
+      g.generateTexture(TEX.FenceV, size, size);
+      g.destroy();
+    }
+    // NW corner: post + rail going east + rail going south
+    {
+      const g = this.add.graphics();
+      // East-going horizontal rail (top + bottom)
+      paintHRail(g, size / 2, size);
+      // South-going vertical rail
+      paintVRail(g, size / 2 - 1, RAIL_BOT, size);
+      // Corner post
+      paintPost(g, size / 2 - POST_W / 2);
+      g.generateTexture(TEX.FenceNW, size, size);
+      g.destroy();
+    }
+    // NE corner: post + rail going west + rail going south
+    {
+      const g = this.add.graphics();
+      paintHRail(g, 0, size / 2);
+      paintVRail(g, size / 2 - 1, RAIL_BOT, size);
+      paintPost(g, size / 2 - POST_W / 2);
+      g.generateTexture(TEX.FenceNE, size, size);
+      g.destroy();
+    }
+    // SW corner: post + rail going east + rail going north
+    {
+      const g = this.add.graphics();
+      paintHRail(g, size / 2, size);
+      paintVRail(g, size / 2 - 1, 0, RAIL_TOP);
+      paintPost(g, size / 2 - POST_W / 2);
+      g.generateTexture(TEX.FenceSW, size, size);
+      g.destroy();
+    }
+    // SE corner
+    {
+      const g = this.add.graphics();
+      paintHRail(g, 0, size / 2);
+      paintVRail(g, size / 2 - 1, 0, RAIL_TOP);
+      paintPost(g, size / 2 - POST_W / 2);
+      g.generateTexture(TEX.FenceSE, size, size);
+      g.destroy();
+    }
+    // Generic "Fence" alias keeps backwards-compat for any caller using it.
+    {
+      const g = this.add.graphics();
+      paintHRail(g, 0, size);
+      paintPost(g, size / 2 - POST_W / 2);
+      g.generateTexture(TEX.Fence, size, size);
+      g.destroy();
+    }
   }
 
   /**
@@ -658,6 +777,64 @@ export class PreloadScene extends Phaser.Scene {
       g.generateTexture(key, size, size);
       g.destroy();
     };
+
+    // Variant: brick body with STONE blend on the named "out" sides instead
+    // of grass. Used at plaza boundary cells where the brick path meets the
+    // plaza's stone interior — picks up the plaza's grey instead of grass
+    // green so the transition reads as path crossing into pavement.
+    const stoneOuter = 0x83848e;
+    const stoneOuterDark = 0x6e6f78;
+    const paintStone = (
+      g: Phaser.GameObjects.Graphics,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+    ) => {
+      g.fillStyle(stoneOuter, 1).fillRect(x, y, w, h);
+      g.fillStyle(stoneOuterDark, 1);
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(x + ((i * 7 + 1) % w), y + ((i * 11 + 1) % h), 1, 1);
+      }
+      g.fillStyle(0x9b9ca6, 1);
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(x + ((i * 13 + 5) % w), y + ((i * 17 + 3) % h), 1, 1);
+      }
+    };
+    const paintStoneTile = (
+      key: string,
+      out: { n?: boolean; s?: boolean; e?: boolean; w?: boolean },
+    ) => {
+      const g = this.add.graphics();
+      paintBrick(g, 0, 0, size, size);
+      if (out.n) {
+        paintStone(g, 0, 0, size, STRIP);
+        g.fillStyle(stoneOuterDark, 0.55).fillRect(0, STRIP, size, 1);
+      }
+      if (out.s) {
+        paintStone(g, 0, size - STRIP, size, STRIP);
+        g.fillStyle(stoneOuterDark, 0.55).fillRect(0, size - STRIP - 1, size, 1);
+      }
+      if (out.w) {
+        paintStone(g, 0, 0, STRIP, size);
+        g.fillStyle(stoneOuterDark, 0.55).fillRect(STRIP, 0, 1, size);
+      }
+      if (out.e) {
+        paintStone(g, size - STRIP, 0, STRIP, size);
+        g.fillStyle(stoneOuterDark, 0.55).fillRect(size - STRIP - 1, 0, 1, size);
+      }
+      g.generateTexture(key, size, size);
+      g.destroy();
+    };
+    // Stone-blend cap tiles (plaza-boundary brick cells)
+    paintStoneTile("tex_bp_stn_n", { n: true });
+    paintStoneTile("tex_bp_stn_s", { s: true });
+    paintStoneTile("tex_bp_stn_e", { e: true });
+    paintStoneTile("tex_bp_stn_w", { w: true });
+    // Strips: horizontal brick path between two stone strips (= path inside
+    // plaza, running east-west) and vertical equivalent.
+    paintStoneTile("tex_bp_stn_hs", { n: true, s: true });
+    paintStoneTile("tex_bp_stn_vs", { e: true, w: true });
 
     paintTile("tex_bp_c", {});
     paintTile("tex_bp_n", { n: true });

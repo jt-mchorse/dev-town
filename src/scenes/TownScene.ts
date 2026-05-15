@@ -67,15 +67,32 @@ export class TownScene extends BaseZoneScene {
     const brickCells = this.rectsToCellSet(brickRects);
     const plazaCells = this.rectsToCellSet([plazaRect]);
     const membershipMask = new Set<string>([...brickCells, ...plazaCells]);
-    // Paint plain interior brick on path cells inside the plaza so the
-    // brick crosses through cleanly without clobbering plaza tiles with
-    // grass overlays.
+    // Paint stone-blend strip tiles on path cells inside the plaza so the
+    // brick crosses through the plaza with a smooth grey blend on its sides,
+    // not a hard red-on-grey cut. Horizontal-path cells get a horizontal
+    // stone strip (stone on N+S); vertical-path cells get vertical stone
+    // strip (stone on E+W). Boundary cells just inside the plaza border
+    // pick up additional stone on the outer side.
     const insidePlaza = new Set([...brickCells].filter((k) => plazaCells.has(k)));
     for (const cell of insidePlaza) {
       const parts = cell.split(",");
       const tx = Number(parts[0]);
       const ty = Number(parts[1]);
-      this.add.image(tx * TILE, ty * TILE, "tex_bp_c").setOrigin(0, 0).setDepth(Z.Ground);
+      // Path direction at this cell: does it have horizontal or vertical
+      // brick neighbors? (Use brickCells membership, not membershipMask, so
+      // we detect direction from the actual path geometry.)
+      const hasW = brickCells.has(`${tx - 1},${ty}`);
+      const hasE = brickCells.has(`${tx + 1},${ty}`);
+      const hasN = brickCells.has(`${tx},${ty - 1}`);
+      const hasS = brickCells.has(`${tx},${ty + 1}`);
+      const horizontal = hasW || hasE;
+      const vertical = hasN || hasS;
+      const key = horizontal && !vertical
+        ? "tex_bp_stn_hs"
+        : vertical && !horizontal
+          ? "tex_bp_stn_vs"
+          : "tex_bp_c"; // path junction inside plaza — fall back to plain brick
+      this.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(Z.Ground);
     }
     // Brick auto-tile on every path cell OUTSIDE the plaza.
     const outsidePlaza = new Set([...brickCells].filter((k) => !plazaCells.has(k)));
@@ -243,16 +260,33 @@ export class TownScene extends BaseZoneScene {
       this.addSolidDecor(TEX.Cottage, ax, ay, 28, 8, 4);
     }
 
-    // tree perimeter (with collision) — thinned, mixed sizes
+    // Tree perimeter (with collision) — thinned, mixed sizes. Each tree's y
+    // is clamped so the WHOLE sprite (canopy through roots) sits inside the
+    // visible world. With anchor (0.5, 0.85) and tree heights of 64–160 px,
+    // a 160-px pine needs y >= 136 to keep its canopy on-screen and
+    // y <= worldH - 24 for the trunk base. Previously trees near the north
+    // edge had canopies clipped above the world top, leaving only the
+    // visible "roots/trunk" portion.
     const treeRng = seededRng(7);
-    const treeKeys = [TEX.TreePine, TEX.TreeOak, "tex_tree_pine_small", "tex_tree_oak_small"];
+    type TreeSpec = { key: string; height: number };
+    const treeSpecs: TreeSpec[] = [
+      { key: TEX.TreePine, height: 160 },          // 2×5 tiles
+      { key: TEX.TreeOak, height: 96 },             // 2×3 tiles
+      { key: "tex_tree_pine_small", height: 128 },  // 2×4 tiles
+      { key: "tex_tree_oak_small", height: 64 },    // 2×2 tiles
+    ];
     let lastTreeX = -1000;
     for (let i = 0; i < 13; i += 1) {
+      const spec = treeSpecs[Math.floor(treeRng() * treeSpecs.length)];
       const tx = TILE * 2 + treeRng() * (worldW - TILE * 4);
       const placeNorth = treeRng() > 0.5;
-      const ty = placeNorth
-        ? TILE * 2 + treeRng() * TILE * 4
-        : worldH - TILE * 3 - treeRng() * TILE * 4;
+      // Min/max y so the entire tree fits within the world bounds.
+      const minY = Math.ceil(spec.height * 0.85);
+      const maxY = worldH - Math.ceil(spec.height * 0.15) - TILE;
+      // 4-tile-wide band along the chosen edge, clamped to legal y range.
+      const bandTop = placeNorth ? minY : worldH - TILE * 4 - 24;
+      const bandBot = placeNorth ? minY + TILE * 4 : maxY;
+      const ty = bandTop + treeRng() * Math.max(0, bandBot - bandTop);
       // skip if on a path / near fountain / near central plaza
       if (Math.abs(tx - cx) < TILE * 7 && Math.abs(ty - cy) < TILE * 5) continue;
       if (Math.abs(tx - cx) < TILE * 1.5) continue;
@@ -260,8 +294,7 @@ export class TownScene extends BaseZoneScene {
       // avoid stacking trees within a trunk-width of each other
       if (Math.abs(tx - lastTreeX) < TILE * 1.2) continue;
       lastTreeX = tx;
-      const key = treeKeys[Math.floor(treeRng() * treeKeys.length)];
-      this.addSolidDecor(key, tx, ty, 6, 3);
+      this.addSolidDecor(spec.key, tx, ty, 6, 3);
     }
 
     // bushes scattered (no collision)
@@ -279,13 +312,25 @@ export class TownScene extends BaseZoneScene {
       new Phaser.Geom.Rectangle(farmX - TILE, farmY - TILE, TILE * (farmCols + 2), TILE * (farmRows + 2)),
       this.GRASS_DIRT_AUTOTILE,
     );
-    for (let i = 0; i < farmCols; i += 1) {
+    // Fence pen: dedicated corner pieces at NW/NE/SW/SE, horizontal rails
+    // between corners on top/bottom rows, vertical posts between corners on
+    // left/right columns. Without proper corner tiles the rails used to
+    // butt against each other at the corners, leaving a visible gap.
+    const farmRight = farmX + TILE * (farmCols - 1);
+    const farmBottom = farmY + TILE * farmRows;
+    this.addSolidDecor(TEX.FenceNW, farmX, farmY, 8, 8);
+    this.addSolidDecor(TEX.FenceNE, farmRight, farmY, 8, 8);
+    this.addSolidDecor(TEX.FenceSW, farmX, farmBottom, 8, 8);
+    this.addSolidDecor(TEX.FenceSE, farmRight, farmBottom, 8, 8);
+    // Top + bottom rails between the corners
+    for (let i = 1; i < farmCols - 1; i += 1) {
       this.addSolidDecor(TEX.FenceH, farmX + i * TILE, farmY, 28, 8);
-      this.addSolidDecor(TEX.FenceH, farmX + i * TILE, farmY + TILE * farmRows, 28, 8);
+      this.addSolidDecor(TEX.FenceH, farmX + i * TILE, farmBottom, 28, 8);
     }
+    // Left + right vertical rails between the corners
     for (let i = 1; i < farmRows; i += 1) {
       this.addSolidDecor(TEX.FenceV, farmX, farmY + i * TILE, 8, 8);
-      this.addSolidDecor(TEX.FenceV, farmX + TILE * (farmCols - 1), farmY + i * TILE, 8, 8);
+      this.addSolidDecor(TEX.FenceV, farmRight, farmY + i * TILE, 8, 8);
     }
     this.addAmbientCritter(TEX.Cow, farmX + TILE * 2, farmY + TILE * 2);
     this.addAmbientCritter(TEX.Chicken, farmX + TILE * 3, farmY + TILE);

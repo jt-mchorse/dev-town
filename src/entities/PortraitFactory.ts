@@ -106,45 +106,47 @@ export function buildPortrait(scene: Phaser.Scene, a: Appearance): string {
   const sp = (sx: number, sy: number, sw: number, sh: number): [number, number, number, number] =>
     [(sx - 16) * 3, sy * 3, sw * 3, sh * 3];
 
-  // Skin patch — opaque, hides whatever hair/hat tried to paint over the face.
+  // Skin patch — opaque, hides whatever hair/hat tried to paint over the
+  // face. Lowered to source y=23..34 so the upper hair fringe stays visible.
+  // Mirrors FaceFactory's HEAD_Y=23, HEAD_H=11.
   ctx.fillStyle = "#f4c590";
-  ctx.fillRect(...sp(25, 18, 14, 13));
-  ctx.clearRect(...sp(25, 18, 1, 1));
-  ctx.clearRect(...sp(38, 18, 1, 1));
-  ctx.clearRect(...sp(25, 30, 1, 1));
-  ctx.clearRect(...sp(38, 30, 1, 1));
+  ctx.fillRect(...sp(25, 23, 14, 11));
+  ctx.clearRect(...sp(25, 23, 1, 1));
+  ctx.clearRect(...sp(38, 23, 1, 1));
+  ctx.clearRect(...sp(25, 33, 1, 1));
+  ctx.clearRect(...sp(38, 33, 1, 1));
   // Jawline shade
   ctx.fillStyle = "#d4a06e";
-  ctx.fillRect(...sp(26, 30, 12, 1));
+  ctx.fillRect(...sp(26, 33, 12, 1));
 
   // Brows
   ctx.fillStyle = "#6e4a24";
-  ctx.fillRect(...sp(26, 21, 3, 1));
-  ctx.fillRect(...sp(35, 21, 3, 1));
+  ctx.fillRect(...sp(26, 25, 3, 1));
+  ctx.fillRect(...sp(35, 25, 3, 1));
 
-  // Eyes: source (26,23) and (35,23), 3×3 each
+  // Eyes: source (26,27) and (35,27), 3×3 each
   ctx.fillStyle = "#1a1d24";
-  ctx.fillRect(...sp(26, 23, 3, 3));
-  ctx.fillRect(...sp(35, 23, 3, 3));
+  ctx.fillRect(...sp(26, 27, 3, 3));
+  ctx.fillRect(...sp(35, 27, 3, 3));
   // Catchlights
   ctx.fillStyle = "#f4f6fa";
-  ctx.fillRect(...sp(26, 23, 1, 1));
-  ctx.fillRect(...sp(35, 23, 1, 1));
+  ctx.fillRect(...sp(26, 27, 1, 1));
+  ctx.fillRect(...sp(35, 27, 1, 1));
 
   // Nose
   ctx.fillStyle = "#d4a06e";
-  ctx.fillRect(...sp(31, 27, 2, 1));
+  ctx.fillRect(...sp(31, 30, 2, 1));
 
   // Cheek blush
   ctx.fillStyle = "#e89580";
-  ctx.fillRect(...sp(26, 28, 2, 1));
-  ctx.fillRect(...sp(36, 28, 2, 1));
+  ctx.fillRect(...sp(26, 31, 2, 1));
+  ctx.fillRect(...sp(36, 31, 2, 1));
 
   // Mouth + smile dimples
   ctx.fillStyle = "#2a1d1d";
-  ctx.fillRect(...sp(30, 29, 4, 1));
-  ctx.fillRect(...sp(29, 30, 1, 1));
-  ctx.fillRect(...sp(34, 30, 1, 1));
+  ctx.fillRect(...sp(30, 32, 4, 1));
+  ctx.fillRect(...sp(29, 33, 1, 1));
+  ctx.fillRect(...sp(34, 33, 1, 1));
 
   canvas.refresh();
   return key;
